@@ -52,16 +52,16 @@ export function MarketLights() {
 }
 
 export const MARKET_CSS = `
-.mk-card { transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease; }
-.mk-card:hover { transform: translateY(-4px); border-color: rgba(124,58,237,0.4); box-shadow: 0 16px 44px rgba(124,58,237,0.14); }
-.mk-card:hover .mk-zoom { transform: scale(1.05); }
-.mk-zoom { transition: transform 0.35s ease; }
-.mk-btn { transition: filter 0.15s ease, transform 0.15s ease; }
+.mk-card { transition: transform 0.22s cubic-bezier(0.4,0,0.2,1), border-color 0.22s ease, box-shadow 0.22s ease; }
+.mk-card:hover { transform: translateY(-4px); border-color: rgba(124,58,237,0.4); box-shadow: 0 16px 44px rgba(124,58,237,0.14), 0 0 0 1px rgba(124,58,237,0.06); }
+.mk-card:hover .mk-zoom { transform: scale(1.06); }
+.mk-zoom { transition: transform 0.35s cubic-bezier(0.4,0,0.2,1); }
+.mk-btn { transition: filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease; }
 .mk-btn:hover { filter: brightness(1.12); }
 .mk-btn:active { transform: scale(0.98); }
 .mk-btn:focus-visible, a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #a855f7; outline-offset: 2px; }
-.mk-fadein { animation: mkFade 0.4s ease both; }
-@keyframes mkFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.mk-fadein { animation: mkFade 0.45s cubic-bezier(0.4,0,0.2,1) both; }
+@keyframes mkFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .mk-skeleton { position: relative; overflow: hidden; background: rgba(255,255,255,0.05); border-radius: 12px; }
 .mk-skeleton::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(168,85,247,0.1), transparent); animation: mkShimmer 1.5s infinite; }
 @keyframes mkShimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }

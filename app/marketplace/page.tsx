@@ -21,13 +21,14 @@ import {
   MARKET_CSS,
   MarketLights,
   MarketError,
-  MarketplaceHeader,
   MarketplaceHero,
   MK,
   ProductGrid,
   SectionHeader,
   SkeletonCards,
 } from "./components/market-ui";
+import { MarketSidebar } from "./components/MarketSidebar";
+import { Top10List } from "./components/Top10List";
 import { ProductCard } from "./components/ProductCard";
 
 const OBJECTIVES = [
@@ -72,6 +73,7 @@ export default function MarketplacePage() {
   // Los datos reales (localStorage) se cargan solo tras el montaje.
   const [snapshot, setSnapshot] = useState<HomeData | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const all = snapshot?.pubs ?? [];
   const categories = snapshot?.categories ?? [];
   const stats = snapshot?.stats ?? { sales: 0, buyers: 0, rating: 0 };
@@ -95,6 +97,7 @@ export default function MarketplacePage() {
     () => [...all].sort((a, b) => b.viewCount + b.salesCount * 10 - (a.viewCount + a.salesCount * 10)).slice(0, 4),
     [all]
   );
+  const top10 = useMemo(() => [...all].sort((a, b) => b.salesCount - a.salesCount).slice(0, 10), [all]);
   const bestSellers = useMemo(() => [...all].sort((a, b) => b.salesCount - a.salesCount).slice(0, 4), [all]);
   const newest = useMemo(
     () => [...all].sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? "")).slice(0, 4),
@@ -119,12 +122,14 @@ export default function MarketplacePage() {
   };
 
   return (
-    <main style={{ minHeight: "100vh", background: MK.bg, color: "#fff", fontFamily: FONT }}>
+    <main style={{ minHeight: "100vh", background: MK.bg, color: "#fff", fontFamily: FONT, display: "flex", position: "relative" }}>
       <MarketLights />
-      <MarketplaceHeader
+      <MarketSidebar
         onSearch={(q) => goExplore(`?q=${encodeURIComponent(q)}`)}
+        mobileOpen={mobileOpen}
+        onMenuToggle={() => setMobileOpen((m) => !m)}
       />
-
+      <div style={{ flex: 1, minWidth: 0, position: "relative", zIndex: 1 }}>
       <MarketplaceHero
         onSearch={(q) => goExplore(`?q=${encodeURIComponent(q)}`)}
         onChip={(format) => goExplore(format ? `?format=${format}` : "")}
@@ -164,6 +169,14 @@ export default function MarketplacePage() {
                 <ProductCard key={p.id} product={p} badge={i < 3 && p.salesCount > 0 ? "Bestseller" : null} />
               ))}
             </ProductGrid>
+
+            <div id="top10" style={{ marginTop: "56px" }}>
+              <SectionHeader
+                title="🏆 Top 10 más vendidos"
+                subtitle="Los productos con más ventas reales de la plataforma."
+              />
+              <Top10List products={top10} />
+            </div>
 
             <div id="categorias" style={{ marginTop: "56px" }}>
               <SectionHeader title="¿Qué querés conseguir?" subtitle="Elegí tu objetivo y filtramos por vos." />
@@ -274,6 +287,7 @@ export default function MarketplacePage() {
             )}
           </div>
         )}
+      </div>
       </div>
       <style>{MARKET_CSS}</style>
     </main>
