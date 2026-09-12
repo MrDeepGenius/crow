@@ -163,10 +163,9 @@ export function BrandPanel({ variant }: { variant: "login" | "register" }) {
         }}
       />
       <div style={{ position: "relative", maxWidth: "460px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "28px" }}>
+        <div style={{ marginBottom: "28px" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/crowlogo.png" alt="" style={{ width: "44px", height: "44px", objectFit: "contain" }} />
-          <span style={{ fontWeight: 800, fontSize: "26px", letterSpacing: "4px" }}>CROW</span>
+          <img src="/crowlogo.png" alt="Crow Market" style={{ width: "76px", height: "76px", objectFit: "contain" }} />
         </div>
         <h2 style={{ fontSize: "clamp(26px, 3vw, 36px)", lineHeight: 1.25, margin: "0 0 12px", letterSpacing: "-0.5px" }}>
           {variant === "login" ? (
@@ -300,10 +299,9 @@ export function AuthShell({ variant, children }: { variant: "login" | "register"
       <BrandPanel variant={variant} />
       <div className="crow-formcol">
         <div className="crow-card">
-          <div className="crow-brand-mini" style={{ alignItems: "center", gap: "10px", marginBottom: "24px" }}>
+          <div className="crow-brand-mini" style={{ alignItems: "center", marginBottom: "24px" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/crowlogo.png" alt="Crow" style={{ width: "38px", height: "38px", objectFit: "contain" }} />
-            <span style={{ fontWeight: 800, fontSize: "20px", letterSpacing: "3px" }}>CROW</span>
+            <img src="/crowlogo.png" alt="Crow Market" style={{ width: "56px", height: "56px", objectFit: "contain" }} />
           </div>
           {children}
         </div>
