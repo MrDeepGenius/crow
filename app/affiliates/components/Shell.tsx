@@ -86,12 +86,13 @@ export function Sidebar({
           height: "100vh",
           display: "flex",
           flexDirection: "column",
-          background: "rgba(10,10,15,0.85)",
-          backdropFilter: "blur(12px)",
-          borderRight: "1px solid rgba(255,255,255,0.07)",
+          background: "linear-gradient(180deg, rgba(12,12,18,0.95) 0%, rgba(8,8,12,0.95) 100%)",
+          backdropFilter: "blur(16px)",
+          borderRight: "1px solid rgba(124,58,237,0.12)",
           padding: "20px 12px",
-          transition: "width 0.2s ease",
+          transition: "width 0.22s cubic-bezier(0.4,0,0.2,1)",
           zIndex: 50,
+          boxShadow: "4px 0 40px rgba(0,0,0,0.4)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "0 8px 20px" }}>
@@ -111,7 +112,7 @@ export function Sidebar({
             {brandTitle ?? "AFILIADO"}
           </div>
         )}
-        <nav style={{ display: "flex", flexDirection: "column", gap: "2px", flex: 1, overflowY: "auto" }}>
+        <nav className="aff-premium-scroll" style={{ display: "flex", flexDirection: "column", gap: "2px", flex: 1, overflowY: "auto", paddingRight: "4px" }}>
           {navItems.map((item) => {
             const isActive = active === item.id;
             const inner = (
@@ -127,8 +128,8 @@ export function Sidebar({
               padding: "11px 12px",
               borderRadius: "12px",
               border: "none",
-              boxShadow: isActive && accent ? `inset 3px 0 0 ${accent}` : "none",
-              background: isActive ? "linear-gradient(135deg, rgba(124,58,237,0.35), rgba(124,58,237,0.12))" : "transparent",
+              boxShadow: isActive ? "inset 3px 0 0 #7c3aed, 0 4px 16px rgba(124,58,237,0.15)" : "none",
+              background: isActive ? "linear-gradient(135deg, rgba(124,58,237,0.28), rgba(124,58,237,0.08))" : "transparent",
               color: isActive ? "#fff" : "#a1a1aa",
               fontWeight: isActive ? "bold" : "normal",
               cursor: "pointer",
@@ -193,7 +194,7 @@ export function AppHeader({
 }) {
   const [menu, setMenu] = useState(false);
   return (
-    <header style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px", flexWrap: "wrap" }}>
+    <header style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "28px", flexWrap: "wrap", padding: "16px 20px", borderRadius: "16px", background: "rgba(12,12,18,0.6)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.06)" }}>
       <button onClick={onMenu} aria-label="Abrir menú" className="aff-btn show-mobile-menu" style={{ display: "none", background: "transparent", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "10px", color: "#fff", padding: "9px 13px", cursor: "pointer" }}>
         ☰
       </button>
