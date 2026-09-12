@@ -27,8 +27,8 @@ export interface AIConfig {
 
 // Configuración actual del sistema
 export const AI_CONFIG: AIConfig = {
-  // MODO DESARROLLO - SIN CONSUMIR APIS EXTERNAS
-  mode: "mock",
+  // Provider activo: "mock" por defecto, "openai" si hay API key
+  mode: (process.env.AI_PROVIDER as AIMode) || (process.env.OPENAI_API_KEY ? "openai" : "mock"),
   
   // Configuración para OpenAI (futuro)
   openai: {

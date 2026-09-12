@@ -201,7 +201,7 @@ export default function KitBuilderPage() {
     if (!idea) return;
     setWorking(true);
     try {
-      const provider = await AIProviderFactory.create("mock");
+      const provider = await AIProviderFactory.create();
       const spec = await provider.analyzeKitIdea(idea);
       const blueprint = await provider.generateKitBlueprint({ originalIdea: idea, specification: spec });
       setSpecDraft(spec);
@@ -225,7 +225,7 @@ export default function KitBuilderPage() {
     setCover(null);
     setWorking(true);
     try {
-      const provider = await AIProviderFactory.create("mock");
+      const provider = await AIProviderFactory.create();
       const spec = await provider.analyzeKitIdea(newIdea);
       const blueprint = await provider.generateKitBlueprint({ originalIdea: newIdea, specification: spec });
       setSpecDraft(spec);
@@ -319,7 +319,7 @@ export default function KitBuilderPage() {
     try {
       const st = engine.getCurrentState();
       if (!st?.specification) throw new Error("Falta el contexto de generación");
-      const provider = await AIProviderFactory.create("mock");
+      const provider = await AIProviderFactory.create();
       const next = await provider.rewriteKitResource(
         { originalIdea: st.originalIdea, specification: st.specification, blueprint: st.blueprint },
         resource,
@@ -341,7 +341,7 @@ export default function KitBuilderPage() {
     if (!st?.specification || !st?.blueprint) return;
     setWorking(true);
     try {
-      const provider = await AIProviderFactory.create("mock");
+      const provider = await AIProviderFactory.create();
       const validation = await provider.validateKitProduct(
         { originalIdea: st.originalIdea, specification: st.specification, blueprint: st.blueprint },
         { blueprint: st.blueprint, resources: resources ?? current.resources }
@@ -784,7 +784,7 @@ export default function KitBuilderPage() {
     try {
       const st = engine.getCurrentState();
       if (!st?.specification) throw new Error("Falta el contexto");
-      const provider = await AIProviderFactory.create("mock");
+      const provider = await AIProviderFactory.create();
       const next = await provider.rewriteKitResource(
         { originalIdea: st.originalIdea, specification: st.specification, blueprint: st.blueprint },
         resource,

@@ -59,7 +59,7 @@ export default function CreatePage() {
 
     try {
       if (productType === "Kit de recursos") {
-        const provider = await AIProviderFactory.create("mock");
+        const provider = await AIProviderFactory.create();
         const spec = await provider.analyzeKitIdea(trimmed);
         const blueprint = await provider.generateKitBlueprint({
           originalIdea: trimmed,
@@ -74,7 +74,7 @@ export default function CreatePage() {
         setPdfSpec(null);
         setPdfBlueprint(null);
       } else if (productType === "Ebook" || productType === "PDF") {
-        const provider = await AIProviderFactory.create("mock");
+        const provider = await AIProviderFactory.create();
         const spec = await provider.analyzePdfIdea(trimmed);
         const blueprint = await provider.generatePdfBlueprint({
           originalIdea: trimmed,
@@ -87,7 +87,7 @@ export default function CreatePage() {
         setWebSpec(null);
         setWebBlueprint(null);
       } else if (productType === "Web interactiva") {
-        const provider = await AIProviderFactory.create("mock");
+        const provider = await AIProviderFactory.create();
         const spec = await provider.analyzeWebIdea(trimmed);
         const blueprint = await provider.generateWebBlueprint({
           originalIdea: trimmed,
@@ -102,7 +102,7 @@ export default function CreatePage() {
         setKitSpec(null);
         setKitBlueprint(null);
       } else if (productType === "Curso") {
-        const provider = await AIProviderFactory.create("mock");
+        const provider = await AIProviderFactory.create();
         const spec = await provider.analyzeIdea(trimmed);
         const context = {
           originalIdea: trimmed,
