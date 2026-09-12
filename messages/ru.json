@@ -1,0 +1,68 @@
+{
+  "common": {
+    "home": "Главная",
+    "about": "О нас",
+    "contact": "Контакты",
+    "login": "Войти",
+    "register": "Регистрация",
+    "logout": "Выйти",
+    "dashboard": "Панель",
+    "account": "Аккаунт",
+    "settings": "Настройки",
+    "save": "Сохранить",
+    "cancel": "Отменить",
+    "delete": "Удалить",
+    "edit": "Редактировать",
+    "create": "Создать",
+    "search": "Поиск",
+    "loading": "Загрузка...",
+    "error": "Ошибка",
+    "success": "Успех",
+    "language": "Язык"
+  },
+  "navigation": {
+    "marketplace": "Магазин",
+    "affiliates": "Партнеры",
+    "creator": "Создатель",
+    "products": "Мои Товары",
+    "rewards": "Награды",
+    "admin": "Админ"
+  },
+  "auth": {
+    "welcomeBack": "Добро пожаловать",
+    "signInToContinue": "Войдите, чтобы продолжить",
+    "email": "Электронная почта",
+    "password": "Пароль",
+    "rememberMe": "Запомнить меня",
+    "forgotPassword": "Забыли пароль?",
+    "dontHaveAccount": "Нет аккаунта?",
+    "createAccount": "Создать аккаунт",
+    "alreadyHaveAccount": "Уже есть аккаунт?"
+  },
+  "marketplace": {
+    "title": "Магазин",
+    "description": "Откройте для себя потрясающие товары",
+    "featured": "Рекомендуемые товары",
+    "categories": "Категории",
+    "price": "Цена",
+    "addToCart": "В корзину",
+    "buyNow": "Купить сейчас",
+    "outOfStock": "Нет в наличии"
+  },
+  "affiliates": {
+    "title": "Партнерская программа",
+    "earnings": "Доходы",
+    "commissions": "Комиссии",
+    "referrals": "Рефералы",
+    "links": "Партнерские ссылки",
+    "stats": "Статистика"
+  },
+  "admin": {
+    "title": "Панель администратора",
+    "users": "Пользователи",
+    "orders": "Заказы",
+    "payments": "Платежи",
+    "fraud": "Обнаружение мошенничества",
+    "analytics": "Аналитика"
+  }
+}
