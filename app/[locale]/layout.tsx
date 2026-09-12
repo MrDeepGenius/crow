@@ -3,6 +3,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { Geist, Geist_Mono } from "next/font/google";
 import "../globals.css";
 import LanguageSelector from '../components/LanguageSelector';
+import Navigation from '../components/Navigation';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -45,14 +46,16 @@ export default async function LocaleLayout({
       lang={locale}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col bg-gray-50">
         <NextIntlClientProvider locale={locale} messages={messages}>
           {/* Header with Language Selector */}
-          <header className="bg-white shadow-sm border-b">
+          <header className="bg-white shadow-sm">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex justify-between items-center h-16">
                 <div className="flex-shrink-0">
-                  <h1 className="text-xl font-bold text-gray-900">Crow</h1>
+                  <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                    🐦 Crow
+                  </h1>
                 </div>
                 <div className="flex items-center space-x-4">
                   <LanguageSelector />
@@ -60,6 +63,9 @@ export default async function LocaleLayout({
               </div>
             </div>
           </header>
+          
+          {/* Navigation */}
+          <Navigation />
           
           {/* Main content */}
           <main className="flex-1">
