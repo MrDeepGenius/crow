@@ -22,6 +22,8 @@ import type {
   WalletTransaction,
 } from "@/app/services/marketplace/marketTypes";
 import { Sidebar, AppHeader } from "@/app/affiliates/components/Shell";
+import { CreatorLogin } from "./components/CreatorLogin";
+import AnimatedBackground from "@/app/components/AnimatedBackground";
 import { GOLD, GOLD_SOFT, creatorCardStyle, CREATOR_CSS } from "./theme";
 import {
   C,
@@ -189,8 +191,8 @@ export function CreatorOsClient() {
     }
   }, [notifications, profile]);
 
-  const createProfile = (): void => {
-    const clean = nameInput.trim();
+  const createProfile = (overrideName?: string): void => {
+    const clean = (overrideName ?? nameInput).trim();
     if (!clean) return;
     const username = clean.toLowerCase().replace(/[^a-z0-9]+/g, "-");
     const created: CreatorProfile = {
@@ -216,25 +218,7 @@ export function CreatorOsClient() {
   };
 
   if (!profile) {
-    return (
-      <ToastProvider>
-        <main style={{ minHeight: "100vh", background: C.bg, color: "#fff", fontFamily: FONT, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
-          <div className="aff-fadein" style={{ maxWidth: "480px", width: "100%", background: "radial-gradient(120% 140% at 50% 0%, rgba(124,58,237,0.16) 0%, rgba(124,58,237,0) 55%), #0c0c10", border: "1px solid rgba(255,255,255,0.09)", borderRadius: "22px", padding: "36px", textAlign: "center" }}>
-            <img src="/crowlogo.png" alt="Crow" style={{ width: "52px", height: "52px", objectFit: "contain", marginBottom: "12px" }} />
-            <h1 style={{ fontSize: "26px", margin: "0 0 8px" }}>Creator <span className="creator-gold-text">OS</span></h1>
-            <p style={{ color: C.muted, margin: "0 0 20px", fontSize: "14px" }}>Creá tu perfil de creador para operar (local, sin cuentas reales).</p>
-            <div style={{ display: "flex", gap: "8px" }}>
-              <label htmlFor="creator-login" style={{ position: "absolute", left: "-9999px" }}>Tu nombre o marca</label>
-              <input id="creator-login" value={nameInput} onChange={(e) => setNameInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") createProfile(); }} placeholder="Tu nombre o marca" style={{ flex: 1, background: "#050508", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "10px", color: "#fff", padding: "12px 14px", fontSize: "14px", fontFamily: FONT }} />
-              <button onClick={createProfile} className="aff-btn" style={{ padding: "12px 20px", borderRadius: "10px", border: "none", background: C.violet, color: "#fff", fontWeight: "bold", cursor: "pointer" }}>
-                Entrar
-              </button>
-            </div>
-          </div>
-        </main>
-        <style>{GLOBAL_CSS + CREATOR_CSS}</style>
-      </ToastProvider>
-    );
+    return <CreatorLogin onLogin={(name) => { setNameInput(name); createProfile(name); }} />;
   }
 
   const section = SECTION_TITLES[tab];
@@ -242,7 +226,10 @@ export function CreatorOsClient() {
 
   return (
     <ToastProvider>
-      <main style={{ minHeight: "100vh", background: C.bg, color: "#fff", fontFamily: FONT, display: "flex" }}>
+      <main style={{ minHeight: "100vh", background: C.bg, color: "#fff", fontFamily: FONT, display: "flex", position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none", opacity: 0.35 }}>
+          <AnimatedBackground />
+        </div>
         <Sidebar
           active={tab}
           collapsed={collapsed}
@@ -269,7 +256,7 @@ export function CreatorOsClient() {
           brandTitle="CREADOR"
           brandSub="Creator OS"
         />
-        <div style={{ flex: 1, minWidth: 0, maxWidth: "1240px", margin: "0 auto", padding: "24px clamp(16px, 3vw, 36px) 64px", width: "100%" }}>
+        <div style={{ flex: 1, minWidth: 0, maxWidth: "1240px", margin: "0 auto", padding: "24px clamp(16px, 3vw, 36px) 64px", width: "100%", position: "relative", zIndex: 1 }}>
           <AppHeader
             title={section.title}
             subtitle={section.subtitle}
@@ -747,8 +734,8 @@ function ProductCenter({
 
 function MiniStat2({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ padding: "14px", borderRadius: "14px", background: "#0c0c0f", border: "1px solid rgba(255,255,255,0.08)" }}>
-      <div style={{ color: C.faint, fontSize: "12px", marginBottom: "4px" }}>{label}</div>
+    <div className="aff-card" style={{ padding: "14px", borderRadius: "14px", background: "linear-gradient(135deg, rgba(232,163,61,0.04) 0%, rgba(232,163,61,0) 60%), #0c0c0f", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 4px 16px rgba(0,0,0,0.3)" }}>
+      <div style={{ color: "#888", fontSize: "12px", marginBottom: "4px" }}>{label}</div>
       <div style={{ fontSize: "20px", fontWeight: "bold" }}>{value}</div>
     </div>
   );
