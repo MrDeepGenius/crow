@@ -1,0 +1,68 @@
+{
+  "common": {
+    "home": "Início",
+    "about": "Sobre",
+    "contact": "Contato",
+    "login": "Entrar",
+    "register": "Registrar-se",
+    "logout": "Sair",
+    "dashboard": "Painel",
+    "account": "Conta",
+    "settings": "Configurações",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "create": "Criar",
+    "search": "Pesquisar",
+    "loading": "Carregando...",
+    "error": "Erro",
+    "success": "Sucesso",
+    "language": "Idioma"
+  },
+  "navigation": {
+    "marketplace": "Mercado",
+    "affiliates": "Afiliados",
+    "creator": "Criador",
+    "products": "Meus Produtos",
+    "rewards": "Recompensas",
+    "admin": "Admin"
+  },
+  "auth": {
+    "welcomeBack": "Bem-vindo de volta",
+    "signInToContinue": "Faça login para continuar",
+    "email": "E-mail",
+    "password": "Senha",
+    "rememberMe": "Lembrar de mim",
+    "forgotPassword": "Esqueceu a senha?",
+    "dontHaveAccount": "Não tem uma conta?",
+    "createAccount": "Criar conta",
+    "alreadyHaveAccount": "Já tem uma conta?"
+  },
+  "marketplace": {
+    "title": "Mercado",
+    "description": "Descubra produtos incríveis",
+    "featured": "Produtos em Destaque",
+    "categories": "Categorias",
+    "price": "Preço",
+    "addToCart": "Adicionar ao Carrinho",
+    "buyNow": "Comprar Agora",
+    "outOfStock": "Esgotado"
+  },
+  "affiliates": {
+    "title": "Programa de Afiliados",
+    "earnings": "Ganhos",
+    "commissions": "Comissões",
+    "referrals": "Indicações",
+    "links": "Links de Afiliado",
+    "stats": "Estatísticas"
+  },
+  "admin": {
+    "title": "Painel de Administração",
+    "users": "Usuários",
+    "orders": "Pedidos",
+    "payments": "Pagamentos",
+    "fraud": "Detecção de Fraude",
+    "analytics": "Analíticas"
+  }
+}
