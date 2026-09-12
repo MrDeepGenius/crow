@@ -511,6 +511,19 @@ export function CheckoutClient() {
                   <h2 className="ck-checkout-title">Finalizar compra</h2>
                 </div>
 
+                <div className="ck-cart-item ck-cart-item-preview">
+                  {product.coverSvg ? (
+                    <div className="ck-cart-item-cover" dangerouslySetInnerHTML={{ __html: product.coverSvg }} />
+                  ) : (
+                    <div className="ck-cart-item-cover ck-cart-item-fallback">{product.title.charAt(0)}</div>
+                  )}
+                  <div className="ck-cart-item-info">
+                    <div className="ck-cart-item-title">{product.title}</div>
+                    <div className="ck-cart-item-meta">{product.previewKind} · {product.category}</div>
+                  </div>
+                  <div className="ck-cart-item-price">{product.price.amount} {product.price.currency}</div>
+                </div>
+
                 <div className="ck-price-box">
                   <div className="ck-price-row">
                     <span className="ck-price-label">Precio del producto</span>
@@ -711,6 +724,28 @@ function PaymentPanel(props: {
 
   return (
     <div className="ck-payment-card">
+      <div className="ck-cart-bar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" />
+          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+        </svg>
+        <span className="ck-cart-bar-text">Carrito</span>
+        <span className="ck-cart-bar-count">1</span>
+      </div>
+
+      <div className="ck-cart-item">
+        {product.coverSvg ? (
+          <div className="ck-cart-item-cover" dangerouslySetInnerHTML={{ __html: product.coverSvg }} />
+        ) : (
+          <div className="ck-cart-item-cover ck-cart-item-fallback">{product.title.charAt(0)}</div>
+        )}
+        <div className="ck-cart-item-info">
+          <div className="ck-cart-item-title">{product.title}</div>
+          <div className="ck-cart-item-meta">{product.previewKind} · {product.category}</div>
+        </div>
+        <div className="ck-cart-item-price">{product.price.amount} {product.price.currency}</div>
+      </div>
+
       <div className="ck-payment-header">
         <div>
           <div className="ck-order-id">ORDEN {order.id}</div>
@@ -1266,6 +1301,80 @@ function CheckoutStyles() {
         box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 80px rgba(124,58,237,0.06);
         animation: ckFadeUp 0.4s ease both;
       }
+      .ck-payment-header { animation: ckFadeUp 0.4s ease both; }
+      .ck-payment-summary { animation: ckFadeUp 0.5s ease both; }
+      .ck-qr-section { animation: ckFadeUp 0.6s ease both; }
+      .ck-pay-action { animation: ckFadeUp 0.7s ease both; }
+      .ck-btn-lg {
+        animation: ckBtnGlow 2.5s ease-in-out infinite;
+      }
+      @keyframes ckBtnGlow {
+        0%, 100% { box-shadow: 0 8px 24px rgba(124,58,237,0.3); }
+        50% { box-shadow: 0 8px 36px rgba(124,58,237,0.5); }
+      }
+      .ck-countdown-value { animation: ckPulse 1s ease-in-out infinite; }
+      @keyframes ckPulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.85; }
+      }
+
+      /* Cart */
+      .ck-cart-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding-bottom: 14px;
+        margin-bottom: 14px;
+        border-bottom: 1px solid var(--c-border);
+        color: var(--c-violet-soft);
+        animation: ckFadeUp 0.3s ease both;
+      }
+      .ck-cart-bar-text { font-size: 14px; font-weight: 700; color: var(--c-text); }
+      .ck-cart-bar-count {
+        font-size: 11px;
+        font-weight: 700;
+        background: var(--c-violet);
+        color: #fff;
+        border-radius: 10px;
+        padding: 2px 8px;
+        min-width: 22px;
+        text-align: center;
+      }
+      .ck-cart-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        background: var(--c-surface-2);
+        border: 1px solid var(--c-border);
+        border-radius: 12px;
+        margin-bottom: 18px;
+        animation: ckFadeUp 0.35s ease both;
+      }
+      .ck-cart-item-cover {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        overflow: hidden;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, rgba(124,58,237,0.15), rgba(91,33,182,0.05));
+      }
+      .ck-cart-item-cover svg { width: 100%; height: 100%; }
+      .ck-cart-item-fallback { font-size: 20px; font-weight: 800; color: var(--c-violet-soft); }
+      .ck-cart-item-info { flex: 1; min-width: 0; }
+      .ck-cart-item-title {
+        font-size: 14px;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .ck-cart-item-meta { font-size: 11px; color: var(--c-faint); margin-top: 2px; }
+      .ck-cart-item-price { font-size: 14px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+      .ck-cart-item-preview { margin-bottom: 16px; }
 
       .ck-payment-header {
         display: flex;
@@ -1317,16 +1426,28 @@ function CheckoutStyles() {
         font-family: inherit;
       }
 
-      .ck-qr-section { text-align: center; margin-bottom: 20px; }
+      .ck-qr-section {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+      }
       .ck-qr-img {
         width: 200px;
         height: 200px;
-        border-radius: 12px;
+        border-radius: 16px;
         background: #fff;
-        padding: 8px;
+        padding: 10px;
+        animation: ckQrPulse 2.5s ease-in-out infinite;
+        box-shadow: 0 0 30px rgba(124,58,237,0.25);
       }
       .ck-qr-placeholder { color: var(--c-faint); font-size: 13px; }
-      .ck-qr-hint { color: var(--c-muted); font-size: 12px; margin-top: 10px; }
+      .ck-qr-hint { color: var(--c-muted); font-size: 12px; margin-top: 12px; }
+      @keyframes ckQrPulse {
+        0%, 100% { box-shadow: 0 0 20px rgba(124,58,237,0.15); }
+        50% { box-shadow: 0 0 40px rgba(124,58,237,0.35); }
+      }
 
       .ck-wallet-label { display: block; color: var(--c-muted); font-size: 12px; margin-bottom: 6px; }
       .ck-wallet-row { display: flex; gap: 8px; margin-bottom: 8px; }
