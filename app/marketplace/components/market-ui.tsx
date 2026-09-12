@@ -9,6 +9,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import type { ProductPublication } from "@/app/services/marketplace/marketTypes";
+import { AccountMenu } from "@/app/components/AccountMenu";
 
 export const MK = {
   bg: "#07070A",
@@ -140,6 +141,7 @@ export function MarketplaceHeader({ onSearch }: { onSearch?: (q: string) => void
         <Link href="/create" className="mk-btn" style={{ padding: "10px 18px", borderRadius: "10px", background: MK.violet, color: "#fff", fontWeight: "bold", textDecoration: "none", fontSize: "13px", whiteSpace: "nowrap" }}>
           Crear
         </Link>
+        <AccountMenu />
       </div>
     </header>
   );

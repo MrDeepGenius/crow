@@ -1,15 +1,16 @@
 // ============================================
-// CREATOR PROFILE - perfil público real
+// CREATOR PROFILE - redirige a la página canónica
 // ============================================
+// La página pública vive en /marketplace/creator/[slug] (foto, bio, stats).
+// Esta ruta legacy redirige para no duplicar ni romper enlaces existentes.
 
-import type { Metadata } from "next";
-import { CreatorClient } from "./CreatorClient";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Creador · Crow Market",
-  description: "Perfil público de un creador de Crow Market.",
-};
-
-export default function CreatorPage() {
-  return <CreatorClient />;
+export default async function CreatorPage({
+  params,
+}: {
+  params: Promise<{ username: string }>;
+}) {
+  const { username } = await params;
+  redirect(`/marketplace/creator/${encodeURIComponent(username)}`);
 }

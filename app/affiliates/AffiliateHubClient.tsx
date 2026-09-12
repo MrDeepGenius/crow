@@ -49,8 +49,10 @@ import {
   cardStyle,
 } from "./components/ui";
 import { Sparkline, AreaChart, Donut, bucketize } from "./components/charts";
+import { RewardsTab } from "./components/RewardsTab";
+import { PhotoUploader } from "@/app/components/CreatorPageEditor";
 
-type Tab = "inicio" | "promotions" | "links" | "commissions" | "analytics" | "invites" | "team" | "saleslog" | "kit" | "referrals" | "notificaciones" | "pagos" | "settings";
+type Tab = "inicio" | "promotions" | "links" | "commissions" | "rewards" | "analytics" | "invites" | "team" | "saleslog" | "kit" | "referrals" | "notificaciones" | "pagos" | "settings";
 type Range = 7 | 30 | 90 | 0;
 
 const SECTION_TITLES: Record<Tab, { title: string; subtitle: string }> = {
@@ -58,6 +60,7 @@ const SECTION_TITLES: Record<Tab, { title: string; subtitle: string }> = {
   promotions: { title: "Mis promociones", subtitle: "Lo que estás vendiendo" },
   links: { title: "Mis enlaces", subtitle: "Tus links personales" },
   commissions: { title: "Comisiones", subtitle: "Cada movimiento, con estado" },
+  rewards: { title: "Crow Rewards", subtitle: "Tus puntos por volumen válido" },
   analytics: { title: "Analíticas", subtitle: "Qué está funcionando" },
   invites: { title: "Invitaciones", subtitle: "Hacé crecer tu red" },
   team: { title: "Mi equipo", subtitle: "Seguimiento, sin multinivel" },
@@ -208,6 +211,7 @@ export function AffiliateHubClient() {
             {tab === "promotions" && <PromotionsTab profile={profile} onChange={refresh} />}
             {tab === "links" && <LinksTab profile={profile} />}
             {tab === "commissions" && <CommissionsTab profile={profile} />}
+            {tab === "rewards" && <RewardsTab />}
             {tab === "analytics" && <AnalyticsTab profile={profile} range={range} setRange={setRange} />}
             {tab === "invites" && <InvitesTab profile={profile} />}
             {tab === "team" && <TeamTab profile={profile} />}
@@ -980,6 +984,38 @@ function ReferralsTab({ profile }: { profile: AffiliateProfile }) {
 // CONFIGURACIÓN
 // ============================================
 
+function AccountPhotoField({ name, onUploaded }: { name: string; onUploaded: (url: string) => void }) {
+  const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
+  const [accountAvatar, setAccountAvatar] = useState<string | null>(null);
+  useEffect(() => {
+    void fetch("/api/auth/me")
+      .then((r) => r.json() as Promise<{ ok: boolean; user?: { avatarPath?: string | null } | null }>)
+      .then((data) => {
+        setLoggedIn(Boolean(data.user));
+        setAccountAvatar(data.user?.avatarPath ?? null);
+      })
+      .catch(() => setLoggedIn(false));
+  }, []);
+  if (loggedIn !== true) return null;
+  return (
+    <div style={{ padding: "14px", borderRadius: "12px", border: "1px solid rgba(124,58,237,0.3)", background: "rgba(124,58,237,0.06)" }}>
+      <div style={{ color: "#c4b5fd", fontSize: "12px", fontWeight: "bold", marginBottom: "10px" }}>
+        Foto de tu cuenta Crow (vale para afiliado, comprador y creador)
+      </div>
+      <PhotoUploader
+        currentUrl={accountAvatar}
+        name={name}
+        compact
+        uploadUrl="/api/account/avatar"
+        onUploaded={(url) => {
+          setAccountAvatar(url);
+          onUploaded(url);
+        }}
+      />
+    </div>
+  );
+}
+
 function SettingsTab({ profile, onChange }: { profile: AffiliateProfile; onChange: () => void }) {
   const [displayName, setDisplayName] = useState(profile.userId);
   const [avatar, setAvatar] = useState("");
@@ -1024,8 +1060,14 @@ function SettingsTab({ profile, onChange }: { profile: AffiliateProfile; onChang
     <div style={{ maxWidth: "520px" }}>
       <label style={labelStyle}>Nombre</label>
       <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} style={inputStyle} />
+      <div style={{ marginTop: "16px", marginBottom: "4px" }}>
+        <AccountPhotoField
+          name={displayName || profile.userId}
+          onUploaded={(url) => setAvatar(url)}
+        />
+      </div>
       <label style={labelStyle}>Foto (URL)</label>
-      <input value={avatar} onChange={(e) => setAvatar(e.target.value)} placeholder="https://..." style={inputStyle} />
+      <input value={avatar} onChange={(e) => setAvatar(e.target.value)} placeholder="https://... (o subí tu foto arriba)" style={inputStyle} />
       <label style={labelStyle}>Email</label>
       <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="vos@email.com" style={inputStyle} />
       <label style={labelStyle}>Wallet de retiro (USDT)</label>

@@ -1,20 +1,29 @@
 // POST /api/payments/quote — cotización firmada (server, sin secretos al cliente)
+// Requiere sesión: la orden debe pertenecer al usuario. El monto sale de la
+// DB (nunca del body: el frontend no puede fijar el precio).
 import { NextResponse } from "next/server";
+import { getAuthUserFromRequest } from "@/app/services/auth/auth";
 import { getPaymentsConfig } from "@/app/services/payments/config";
 import { issueQuote } from "@/app/services/payments/quotes";
+import { getOrderForUser } from "@/app/services/db/purchase";
 import { randomUUID } from "node:crypto";
 
 export async function POST(req: Request): Promise<NextResponse> {
   try {
-    const body = (await req.json()) as { orderId?: unknown; amount?: unknown; currency?: unknown };
+    const user = getAuthUserFromRequest(req);
+    if (!user) {
+      return NextResponse.json({ ok: false, reason: "UNAUTHENTICATED" }, { status: 401 });
+    }
+    const body = (await req.json()) as { orderId?: unknown };
     if (typeof body.orderId !== "string" || !/^[A-Za-z0-9-]{4,64}$/.test(body.orderId)) {
       return NextResponse.json({ ok: false, reason: "INVALID_ORDER" }, { status: 400 });
     }
-    if (typeof body.amount !== "number" || !(body.amount > 0) || !Number.isFinite(body.amount)) {
-      return NextResponse.json({ ok: false, reason: "INVALID_AMOUNT" }, { status: 400 });
+    const order = getOrderForUser(body.orderId, user.id);
+    if (!order) {
+      return NextResponse.json({ ok: false, reason: "FORBIDDEN" }, { status: 403 });
     }
-    if (typeof body.currency !== "string" || body.currency.trim().length === 0) {
-      return NextResponse.json({ ok: false, reason: "INVALID_CURRENCY" }, { status: 400 });
+    if (order.status !== "PENDING" && order.status !== "VERIFYING") {
+      return NextResponse.json({ ok: false, reason: "ORDER_NOT_ACTIVE", status: order.status }, { status: 409 });
     }
     const config = getPaymentsConfig();
     if (config.usingDevSecret) {
@@ -22,9 +31,9 @@ export async function POST(req: Request): Promise<NextResponse> {
     }
     const quote = issueQuote(
       {
-        orderId: body.orderId,
-        amount: body.amount,
-        currency: body.currency.trim().slice(0, 8),
+        orderId: order.id,
+        amount: order.paymentAmount,
+        currency: order.currency,
         treasury: config.treasury,
         chainId: config.chainId,
         ttlMinutes: config.orderTtlMinutes,
@@ -38,10 +47,13 @@ export async function POST(req: Request): Promise<NextResponse> {
       payment: {
         provider: "usdt-bep20",
         chain: "BNB Smart Chain",
+        network: config.network,
         chainId: config.chainId,
         token: "USDT",
+        standard: "BEP-20",
         tokenContract: config.usdtContract,
         treasury: config.treasury,
+        expectedRecipient: config.treasury,
         minConfirmations: config.minConfirmations,
       },
     });

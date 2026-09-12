@@ -26,25 +26,52 @@ export function LearnClient() {
       return;
     }
     setProduct(pub);
-    let buyer = "";
-    try {
-      buyer = window.localStorage.getItem("crow_buyer_id") ?? "";
-    } catch {
-      buyer = "";
-    }
-    setBuyerId(buyer);
-    if (!buyer || !hasAccess(buyer, pub.id)) {
-      setDenied(true);
-      return;
-    }
-    try {
-      const raw = window.localStorage.getItem("crow_last_course");
-      if (raw) setCourse(JSON.parse(raw) as GeneratedCourse);
-      else setDenied(true);
-    } catch {
-      setDenied(true);
-    }
-    logEvent("course_started", pub.id, buyer || null);
+    const loadContent = (owner: string): void => {
+      setBuyerId(owner);
+      try {
+        const raw = window.localStorage.getItem("crow_last_course");
+        if (raw) {
+          setCourse(JSON.parse(raw) as GeneratedCourse);
+          logEvent("course_started", pub.id, owner || null);
+        } else {
+          setDenied(true);
+        }
+      } catch {
+        setDenied(true);
+      }
+    };
+    // Acceso server-side primero: el cliente nunca decide.
+    void fetch(`/api/access?productId=${encodeURIComponent(pub.id)}`)
+      .then((r) => r.json() as Promise<{ ok: boolean; hasAccess?: boolean }>)
+      .then((data) => {
+        if (data.ok && data.hasAccess) {
+          loadContent("server");
+          return;
+        }
+        if (!data.ok) {
+          // Servidor inalcanzable: fallback legado solo con entitlement local.
+          let buyer = "";
+          try {
+            buyer = window.localStorage.getItem("crow_buyer_id") ?? "";
+          } catch {
+            buyer = "";
+          }
+          if (buyer && hasAccess(buyer, pub.id)) loadContent(buyer);
+          else setDenied(true);
+          return;
+        }
+        setDenied(true);
+      })
+      .catch(() => {
+        let buyer = "";
+        try {
+          buyer = window.localStorage.getItem("crow_buyer_id") ?? "";
+        } catch {
+          buyer = "";
+        }
+        if (buyer && hasAccess(buyer, pub.id)) loadContent(buyer);
+        else setDenied(true);
+      });
   }, [params.id]);
 
   if (denied) {

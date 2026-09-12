@@ -23,23 +23,46 @@ export function InteractiveProductClient() {
       setDenied(true);
       return;
     }
-    let buyer = "";
-    try {
-      buyer = window.localStorage.getItem("crow_buyer_id") ?? "";
-    } catch {
-      buyer = "";
-    }
-    if (!buyer || !hasAccess(buyer, pub.id)) {
-      setDenied(true);
-      return;
-    }
-    try {
-      const raw = window.localStorage.getItem("crow_last_web");
-      if (raw) setWeb(JSON.parse(raw) as InteractiveWebProduct);
-      else setDenied(true);
-    } catch {
-      setDenied(true);
-    }
+    const loadContent = (): void => {
+      try {
+        const raw = window.localStorage.getItem("crow_last_web");
+        if (raw) setWeb(JSON.parse(raw) as InteractiveWebProduct);
+        else setDenied(true);
+      } catch {
+        setDenied(true);
+      }
+    };
+    // Acceso server-side primero: el cliente nunca decide.
+    void fetch(`/api/access?productId=${encodeURIComponent(pub.id)}`)
+      .then((r) => r.json() as Promise<{ ok: boolean; hasAccess?: boolean }>)
+      .then((data) => {
+        if (data.ok && data.hasAccess) {
+          loadContent();
+          return;
+        }
+        if (!data.ok) {
+          let buyer = "";
+          try {
+            buyer = window.localStorage.getItem("crow_buyer_id") ?? "";
+          } catch {
+            buyer = "";
+          }
+          if (buyer && hasAccess(buyer, pub.id)) loadContent();
+          else setDenied(true);
+          return;
+        }
+        setDenied(true);
+      })
+      .catch(() => {
+        let buyer = "";
+        try {
+          buyer = window.localStorage.getItem("crow_buyer_id") ?? "";
+        } catch {
+          buyer = "";
+        }
+        if (buyer && hasAccess(buyer, pub.id)) loadContent();
+        else setDenied(true);
+      });
   }, [params.id]);
 
   if (denied) {

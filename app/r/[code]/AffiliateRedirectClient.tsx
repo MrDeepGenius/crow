@@ -16,18 +16,34 @@ export function AffiliateRedirectClient() {
 
   useEffect(() => {
     const link = findLinkByCode(params.code);
-    if (!link || link.active === false) {
-      setError(true);
+    if (link && link.active !== false) {
+      recordClick(link.affiliateId, link.productId);
+      saveAttribution({ affiliateId: link.affiliateId, productId: link.productId, timestamp: new Date().toISOString() });
+      const product = getPublication(link.productId);
+      if (!product || product.status !== "PUBLISHED") {
+        setError(true);
+        return;
+      }
+      router.replace(`/marketplace/product/${product.slug}`);
       return;
     }
-    recordClick(link.affiliateId, link.productId);
-    saveAttribution({ affiliateId: link.affiliateId, productId: link.productId, timestamp: new Date().toISOString() });
-    const product = getPublication(link.productId);
-    if (!product || product.status !== "PUBLISHED") {
-      setError(true);
-      return;
-    }
-    router.replace(`/marketplace/product/${product.slug}`);
+    // Código server (CROW-XXXXXX): se guarda para el checkout antifraude
+    // y se redirige al marketplace. Flujo local intacto.
+    void fetch(`/api/referrals/resolve?code=${encodeURIComponent(params.code)}`)
+      .then((r) => r.json() as Promise<{ ok: boolean; valid?: boolean }>)
+      .then((data) => {
+        if (!data.ok || !data.valid) {
+          setError(true);
+          return;
+        }
+        try {
+          window.localStorage.setItem("crow_server_affiliate_code", params.code.trim().toUpperCase());
+        } catch {
+          // sin storage
+        }
+        router.replace("/marketplace");
+      })
+      .catch(() => setError(true));
   }, [params.code, router]);
 
   return (

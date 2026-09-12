@@ -5,6 +5,7 @@ import Link from "next/link";
 import { listPublications } from "@/app/services/marketplace/marketStore";
 import { listOrders } from "@/app/services/marketplace/marketOrders";
 import { countEvents, getCreatorProfile } from "@/app/services/marketplace/marketStore";
+import { CreatorPageEditor } from "@/app/components/CreatorPageEditor";
 
 const FONT: string = '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
@@ -85,7 +86,9 @@ export function CreatorDashboardClient() {
                 </div>
               ))}
             </div>
-            <h2 style={{ fontSize: "18px", margin: "0 0 12px" }}>Top productos</h2>
+            <h2 style={{ fontSize: "18px", margin: "32px 0 0" }}>Mi página pública</h2>
+            <CreatorPageEditor />
+            <h2 style={{ fontSize: "18px", margin: "32px 0 12px" }}>Top productos</h2>
             {stats.top.length === 0 ? (
               <div style={{ color: "#888", fontSize: "14px" }}>Todavía no publicaste productos.</div>
             ) : (

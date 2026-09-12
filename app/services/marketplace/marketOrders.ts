@@ -88,6 +88,10 @@ export function createOrder(input: CreateOrderInput, storage?: StorageLike): Ord
     status: "PENDING",
     paymentProvider: "not_connected",
     paymentReference: null,
+    network: "BSC",
+    expectedRecipient: null,
+    txHash: null,
+    blockNumber: null,
     expiresAt: new Date(now + (input.ttlMinutes ?? ORDER_TTL_MINUTES) * 60000).toISOString(),
     createdAt: new Date(now).toISOString(),
     paidAt: null,
@@ -115,9 +119,10 @@ export function setOrderStatus(
   const order = all.find((o) => o.id === id);
   if (!order) return false;
   const allowed =
-    (order.status === "PENDING" && (status === "VERIFYING" || status === "FAILED" || status === "CANCELLED" || status === "EXPIRED")) ||
-    (order.status === "VERIFYING" && (status === "PAID" || status === "FAILED" || status === "EXPIRED")) ||
+    (order.status === "PENDING" && (status === "VERIFYING" || status === "FAILED" || status === "CANCELLED" || status === "EXPIRED" || status === "REVIEW_REQUIRED")) ||
+    (order.status === "VERIFYING" && (status === "PAID" || status === "FAILED" || status === "EXPIRED" || status === "REVIEW_REQUIRED")) ||
     (order.status === "PENDING" && status === "PAID") ||
+    (order.status === "REVIEW_REQUIRED" && (status === "PAID" || status === "FAILED" || status === "CANCELLED" || status === "EXPIRED")) ||
     (order.status === "PAID" && status === "REFUNDED");
   if (!allowed) return false;
   order.status = status;
@@ -134,17 +139,62 @@ export function setOrderStatus(
 /**
  * Marca PAID con referencia de pago on-chain. Solo debe llamarse con una
  * confirmación válida del backend (nunca por decisión del frontend).
+ * Idempotente: si ya está PAID con el mismo txHash, retorna true sin duplicar.
  */
-export function markPaidWithTx(id: string, txHash: string, storage?: StorageLike): boolean {
+export function markPaidWithTx(
+  id: string,
+  txHash: string,
+  blockNumber?: number,
+  storage?: StorageLike
+): boolean {
   const s = resolveStorage(storage);
   const all = readOrders(s);
   const order = all.find((o) => o.id === id);
   if (!order) return false;
-  if (order.status !== "VERIFYING" && order.status !== "PENDING") return false;
+  const normalized = txHash.toLowerCase();
+  if (order.status === "PAID") {
+    return order.paymentReference === normalized || order.txHash === normalized;
+  }
+  if (
+    order.status !== "VERIFYING" &&
+    order.status !== "PENDING" &&
+    order.status !== "REVIEW_REQUIRED"
+  )
+    return false;
   order.status = "PAID";
   order.paymentProvider = "usdt-bep20";
-  order.paymentReference = txHash.toLowerCase();
+  order.paymentReference = normalized;
+  order.txHash = normalized;
+  if (typeof blockNumber === "number" && Number.isFinite(blockNumber)) {
+    order.blockNumber = blockNumber;
+  }
+  order.network = order.network ?? "BSC";
   order.paidAt = new Date().toISOString();
+  try {
+    s.setItem(ORDERS_KEY, JSON.stringify(all));
+  } catch {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Marca REVIEW_REQUIRED cuando la TX existe pero no coincide con la orden
+ * (monto, recipient, token, etc). Requiere revisión manual excepcional.
+ * Nunca marca PAID.
+ */
+export function markReviewRequired(
+  id: string,
+  txHash: string,
+  storage?: StorageLike
+): boolean {
+  const s = resolveStorage(storage);
+  const all = readOrders(s);
+  const order = all.find((o) => o.id === id);
+  if (!order) return false;
+  if (order.status !== "PENDING" && order.status !== "VERIFYING") return false;
+  order.status = "REVIEW_REQUIRED";
+  order.txHash = txHash.toLowerCase();
   try {
     s.setItem(ORDERS_KEY, JSON.stringify(all));
   } catch {

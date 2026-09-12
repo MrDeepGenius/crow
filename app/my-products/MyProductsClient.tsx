@@ -5,51 +5,73 @@ import Link from "next/link";
 import { getPublication, logEvent } from "@/app/services/marketplace/marketStore";
 import { listEntitlements } from "@/app/services/marketplace/marketLedger";
 import type { Entitlement, ProductPublication } from "@/app/services/marketplace/marketTypes";
+import { AccountMenu } from "@/app/components/AccountMenu";
 
 const FONT: string = '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
+interface ServerItem {
+  productId: string;
+  orderId: string;
+  grantedAt: string;
+}
+
 export function MyProductsClient() {
-  const [buyerId, setBuyerId] = useState("");
-  const [input, setInput] = useState("");
-  const [items, setItems] = useState<{ entitlement: Entitlement; product: ProductPublication }[]>([]);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [items, setItems] = useState<{ product: ProductPublication; grantedAt: string }[]>([]);
+  const [legacy, setLegacy] = useState<{ entitlement: Entitlement; product: ProductPublication }[]>([]);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    void fetch("/api/auth/me")
+      .then((r) => r.json() as Promise<{ ok: boolean; user?: { email: string } | null }>)
+      .then((data) => {
+        setUserEmail(data.user?.email ?? null);
+        setAuthChecked(true);
+      })
+      .catch(() => {
+        setUserEmail(null);
+        setAuthChecked(true);
+      });
+    // Legado de este dispositivo (compras anónimas anteriores a la cuenta).
     try {
-      const saved = window.localStorage.getItem("crow_buyer_id");
-      if (saved) {
-        setBuyerId(saved);
-        setInput(saved);
+      const buyer = window.localStorage.getItem("crow_buyer_id");
+      if (buyer) {
+        setLegacy(
+          listEntitlements()
+            .filter((e) => e.userId === buyer && !e.revokedAt)
+            .flatMap((entitlement) => {
+              const product = getPublication(entitlement.productId);
+              return product ? [{ entitlement, product }] : [];
+            })
+        );
       }
     } catch {
-      // sin comprador
+      // sin legado
     }
   }, []);
 
   useEffect(() => {
-    if (!buyerId) {
+    if (!userEmail) {
       setItems([]);
       return;
     }
-    const mine = listEntitlements()
-      .filter((e) => e.userId === buyerId && !e.revokedAt)
-      .flatMap((entitlement) => {
-        const product = getPublication(entitlement.productId);
-        return product ? [{ entitlement, product }] : [];
+    void fetch("/api/my-products")
+      .then((r) => r.json() as Promise<{ ok: boolean; items?: ServerItem[] }>)
+      .then((data) => {
+        if (!data.ok || !data.items) return;
+        setItems(
+          data.items.flatMap((it) => {
+            const product = getPublication(it.productId);
+            return product ? [{ product, grantedAt: it.grantedAt }] : [];
+          })
+        );
+      })
+      .catch(() => {
+        // sin conexión: se muestra el legado si existe
       });
-    setItems(mine);
-  }, [buyerId]);
-
-  const login = (): void => {
-    if (!input.trim()) return;
-    setBuyerId(input.trim());
-    try {
-      window.localStorage.setItem("crow_buyer_id", input.trim());
-    } catch {
-      // no bloquea
-    }
-  };
+  }, [userEmail]);
 
   const downloadProduct = async (product: ProductPublication): Promise<void> => {
     setWorking(true);
@@ -75,7 +97,7 @@ export function MyProductsClient() {
         });
         triggerDownload(new Blob([bytes as unknown as BlobPart], { type: "application/zip" }), `${product.slug}.zip`);
       }
-      logEvent("download", product.id, buyerId);
+      logEvent("download", product.id, userEmail);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error descargando");
     } finally {
@@ -90,18 +112,25 @@ export function MyProductsClient() {
           <img src="/crowlogo.png" alt="Crow" style={{ width: "36px", height: "36px", objectFit: "contain" }} />
           Mis productos
         </Link>
+        <div style={{ marginLeft: "auto" }}>
+          <AccountMenu />
+        </div>
       </header>
       <section style={{ maxWidth: "1000px", margin: "0 auto", padding: "40px 24px 80px" }}>
-        {!buyerId ? (
+        {!authChecked ? (
+          <div style={{ color: "#888" }}>Cargando...</div>
+        ) : !userEmail ? (
           <div style={{ background: "rgba(15,15,18,0.9)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "16px", padding: "24px", maxWidth: "480px" }}>
-            <h1 style={{ fontSize: "22px", margin: "0 0 8px" }}>Identificate para ver tus productos</h1>
-            <p style={{ color: "#888", fontSize: "14px" }}>Usá el mismo identificador con el que compraste.</p>
-            <div style={{ display: "flex", gap: "8px", marginTop: "16px" }}>
-              <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Tu email o usuario" style={{ flex: 1, background: "#0c0c0f", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "10px", color: "#fff", padding: "12px 14px", fontSize: "14px", fontFamily: FONT }} />
-              <button onClick={login} style={{ padding: "12px 20px", borderRadius: "10px", border: "none", background: "#7c3aed", color: "#fff", fontWeight: "bold", cursor: "pointer" }}>
-                Entrar
-              </button>
-            </div>
+            <h1 style={{ fontSize: "22px", margin: "0 0 8px" }}>Iniciá sesión para ver tus productos</h1>
+            <p style={{ color: "#888", fontSize: "14px" }}>Tus compras están ligadas a tu cuenta, no a este navegador.</p>
+            <Link href="/login?return=/my-products" style={{ display: "inline-block", marginTop: "16px", padding: "12px 20px", borderRadius: "10px", background: "#7c3aed", color: "#fff", fontWeight: "bold", textDecoration: "none" }}>
+              Iniciar sesión
+            </Link>
+            {legacy.length > 0 && (
+              <p style={{ color: "#666", fontSize: "12px", marginTop: "16px" }}>
+                Tenés {legacy.length} compra(s) anónima(s) en este dispositivo (legado). Iniciá sesión y comprá con cuenta para acceso permanente.
+              </p>
+            )}
           </div>
         ) : items.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 20px", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "16px" }}>
@@ -113,10 +142,10 @@ export function MyProductsClient() {
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
-            {items.map(({ entitlement, product }) => (
-              <div key={entitlement.id} style={{ padding: "20px", borderRadius: "16px", background: "#0c0c0f", border: "1px solid rgba(255,255,255,0.08)" }}>
+            {items.map(({ product, grantedAt }) => (
+              <div key={product.id} style={{ padding: "20px", borderRadius: "16px", background: "#0c0c0f", border: "1px solid rgba(255,255,255,0.08)" }}>
                 <div style={{ fontSize: "11px", color: "#a855f7", fontWeight: "bold", marginBottom: "6px" }}>
-                  {product.format.toUpperCase()} · comprado {entitlement.grantedAt.slice(0, 10)}
+                  {product.format.toUpperCase()} · comprado {grantedAt.slice(0, 10)}
                 </div>
                 <div style={{ fontWeight: "bold", fontSize: "16px", marginBottom: "12px" }}>{product.title}</div>
                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>

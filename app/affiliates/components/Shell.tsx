@@ -14,6 +14,7 @@ export type ShellSection =
   | "promotions"
   | "links"
   | "commissions"
+  | "rewards"
   | "analytics"
   | "team"
   | "saleslog"
@@ -30,6 +31,7 @@ export const NAV: { id: ShellSection; label: string; icon: string; href?: string
   { id: "promotions", label: "Mis promociones", icon: "◈" },
   { id: "links", label: "Mis enlaces", icon: "⧉" },
   { id: "commissions", label: "Comisiones", icon: "◉" },
+  { id: "rewards", label: "Rewards", icon: "★" },
   { id: "analytics", label: "Analíticas", icon: "▤" },
   { id: "team", label: "Mi equipo", icon: "◍" },
   { id: "saleslog", label: "Log de ventas", icon: "☰" },

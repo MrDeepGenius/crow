@@ -10,8 +10,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   getCreatorProfile,
   listCategories,
+  queryPublications,
   saveCreatorProfile,
   savePublication,
+  slugifyTitle,
   uid,
   uniqueSlug,
 } from "@/app/services/marketplace/marketStore";
@@ -22,6 +24,10 @@ import {
   type LocalFormat,
 } from "@/app/services/marketplace/productAdapters";
 import type { Category, ProductBonus, ProductPublication } from "@/app/services/marketplace/marketTypes";
+import { PricingAdvisorWidget } from "@/app/components/PricingAdvisor";
+import { extractFeatures } from "@/app/services/pricing/extractFeatures";
+import { selectCatalogComparables, type CatalogProduct } from "@/app/services/pricing/marketResearch";
+import type { ComparableInput } from "@/app/services/pricing/types";
 
 const FONT: string = '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 const CURRENCIES = ["USD", "EUR", "ARS", "MXN", "BRL"];
@@ -77,6 +83,36 @@ export function PublishClient() {
     format: (format || "pdf") as LocalFormat,
     summary,
   });
+
+  // Pricing Advisor: características reales + comparables del catálogo.
+  const pricingFeatures = summary
+    ? extractFeatures(summary, {
+        title: title || summary.title,
+        category,
+        level,
+        language,
+        bonuses: bonuses.length,
+      })
+    : null;
+  const pricingKey = summary
+    ? `draft:${summary.format}:${slugifyTitle(title || summary.title)}`
+    : "";
+  const pricingComparables: ComparableInput[] = summary
+    ? selectCatalogComparables(
+        queryPublications({ sort: "relevance", pageSize: 48 }).items.map(
+          (p): CatalogProduct => ({
+            title: p.title,
+            category: p.category,
+            format: p.format,
+            price: p.price.amount,
+            currency: p.price.currency,
+          })
+        ),
+        category,
+        summary.format,
+        title || summary.title
+      )
+    : [];
 
   useEffect(() => {
     if (summary && !title) setTitle(summary.title);
@@ -285,6 +321,20 @@ export function PublishClient() {
               {check.warnings.map((w) => <div key={w} style={{ marginTop: "6px" }}>Requiere atención: {w}</div>)}
               {check.blockers.map((b) => <div key={b} style={{ marginTop: "6px", color: "#f87171" }}>No puede publicarse: {b}</div>)}
             </div>
+
+            {summary && (
+              <PricingAdvisorWidget
+                productKey={pricingKey}
+                features={pricingFeatures}
+                format={summary.format}
+                comparables={pricingComparables}
+                onUsePrice={(p) => setPrice(String(p))}
+                onUsePromo={(regular, sale) => {
+                  setPreviousPrice(String(regular));
+                  setPrice(String(sale));
+                }}
+              />
+            )}
 
             {error && <div style={{ color: "#f87171", fontSize: "13px", marginTop: "12px" }}>{error}</div>}
             <button onClick={publish} disabled={working} style={{ width: "100%", marginTop: "16px", padding: "14px", borderRadius: "12px", border: "none", background: "#7c3aed", color: "#fff", fontWeight: "bold", cursor: "pointer", fontSize: "15px", opacity: working ? 0.6 : 1 }}>

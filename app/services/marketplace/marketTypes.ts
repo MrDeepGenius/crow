@@ -105,7 +105,7 @@ export interface Category {
 
 // ---------- Fases 5+ (modelado, sin UI todavía) ----------
 
-export type OrderStatus = "PENDING" | "VERIFYING" | "PAID" | "EXPIRED" | "FAILED" | "REFUNDED" | "CANCELLED";
+export type OrderStatus = "PENDING" | "VERIFYING" | "PAID" | "EXPIRED" | "FAILED" | "REFUNDED" | "CANCELLED" | "REVIEW_REQUIRED";
 
 export interface Order {
   id: string;
@@ -120,6 +120,14 @@ export interface Order {
   status: OrderStatus;
   paymentProvider: string;
   paymentReference: string | null;
+  /** Red de pago (BSC para USDT BEP-20). Opcional por compat con órdenes viejas. */
+  network?: string;
+  /** Destinatario esperado (wallet Crow en minúsculas). Solo informativo; la verdad la tiene el servidor. */
+  expectedRecipient?: string | null;
+  /** TX hash on-chain verificado (minúsculas). Duplica paymentReference para el admin. */
+  txHash?: string | null;
+  /** Bloque donde se minó la TX verificada. */
+  blockNumber?: number | null;
   expiresAt?: string;
   createdAt: string;
   paidAt: string | null;
