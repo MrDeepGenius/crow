@@ -107,6 +107,7 @@ function applyMigrations(db: DatabaseSync): void {
   applyV6(db);
   applyV7(db);
   applyV8(db);
+  applyV9(db);
 }
 
 // ---------- Migración v2: cuenta única multi-rol + onboarding ----------
@@ -469,6 +470,19 @@ CREATE INDEX IF NOT EXISTS idx_pool_license ON rewards_pool_ledger(licenseOrderI
 `);
   const now = new Date().toISOString();
   db.prepare("INSERT INTO schema_migrations (version, appliedAt) VALUES (8, ?)").run(now);
+}
+
+function applyV9(db: DatabaseSync): void {
+  const done = db
+    .prepare("SELECT version FROM schema_migrations WHERE version = 9")
+    .get() as { version: number } | undefined;
+  if (done) return;
+  const cols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+  if (!cols.some((c) => c.name === "googleId")) {
+    db.exec("ALTER TABLE users ADD COLUMN googleId TEXT");
+  }
+  const now = new Date().toISOString();
+  db.prepare("INSERT INTO schema_migrations (version, appliedAt) VALUES (9, ?)").run(now);
 }
 
 /** Singleton por ruta. En tests usar DATABASE_PATH temporal + closeDb(). */
