@@ -1,5 +1,7 @@
 "use client";
 
+import AnimatedBackground from "./components/AnimatedBackground";
+
 export default function Home() {
   const handleCreateProduct = () => {
     window.location.href = "/create";
@@ -12,8 +14,12 @@ export default function Home() {
         background: "#050505",
         color: "white",
         fontFamily: '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+        position: "relative",
+        overflow: "hidden",
       }}
     >
+      <AnimatedBackground />
+      <div style={{ position: "relative", zIndex: 1 }}>
       <nav
         style={{
           height: "80px",
@@ -162,6 +168,7 @@ export default function Home() {
                   fontWeight: "bold",
                   cursor: "pointer",
                   boxShadow: "0 0 35px rgba(124,58,237,0.3)",
+                  animation: "glow-pulse 3s ease-in-out infinite",
                 }}
               >
                 Crear mi producto →
@@ -190,6 +197,7 @@ export default function Home() {
               background: "rgba(15,15,18,0.9)",
               boxShadow: "0 0 80px rgba(124,58,237,0.15)",
               overflow: "hidden",
+              animation: "float-soft 6s ease-in-out infinite",
             }}
           >
             <div
@@ -490,6 +498,7 @@ export default function Home() {
       >
         Crow Market © 2026
       </footer>
+      </div>
     </main>
   );
 }
