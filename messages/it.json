@@ -1,0 +1,68 @@
+{
+  "common": {
+    "home": "Home",
+    "about": "Informazioni",
+    "contact": "Contatto",
+    "login": "Accedi",
+    "register": "Registrati",
+    "logout": "Esci",
+    "dashboard": "Dashboard",
+    "account": "Account",
+    "settings": "Impostazioni",
+    "save": "Salva",
+    "cancel": "Annulla",
+    "delete": "Elimina",
+    "edit": "Modifica",
+    "create": "Crea",
+    "search": "Cerca",
+    "loading": "Caricamento...",
+    "error": "Errore",
+    "success": "Successo",
+    "language": "Lingua"
+  },
+  "navigation": {
+    "marketplace": "Mercato",
+    "affiliates": "Affiliati",
+    "creator": "Creatore",
+    "products": "I miei Prodotti",
+    "rewards": "Ricompense",
+    "admin": "Admin"
+  },
+  "auth": {
+    "welcomeBack": "Bentornato",
+    "signInToContinue": "Accedi per continuare",
+    "email": "Email",
+    "password": "Password",
+    "rememberMe": "Ricordami",
+    "forgotPassword": "Password dimenticata?",
+    "dontHaveAccount": "Non hai un account?",
+    "createAccount": "Crea account",
+    "alreadyHaveAccount": "Hai già un account?"
+  },
+  "marketplace": {
+    "title": "Mercato",
+    "description": "Scopri prodotti straordinari",
+    "featured": "Prodotti in Evidenza",
+    "categories": "Categorie",
+    "price": "Prezzo",
+    "addToCart": "Aggiungi al Carrello",
+    "buyNow": "Compra Ora",
+    "outOfStock": "Esaurito"
+  },
+  "affiliates": {
+    "title": "Programma di Affiliazione",
+    "earnings": "Guadagni",
+    "commissions": "Commissioni",
+    "referrals": "Referral",
+    "links": "Link di Affiliazione",
+    "stats": "Statistiche"
+  },
+  "admin": {
+    "title": "Pannello di Amministrazione",
+    "users": "Utenti",
+    "orders": "Ordini",
+    "payments": "Pagamenti",
+    "fraud": "Rilevamento Frodi",
+    "analytics": "Analisi"
+  }
+}
