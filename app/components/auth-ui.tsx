@@ -163,7 +163,7 @@ export function BrandPanel({ variant }: { variant: "login" | "register" }) {
         }}
       />
       <div style={{ position: "relative", maxWidth: "460px" }}>
-        <div style={{ marginBottom: "28px" }}>
+        <div style={{ marginBottom: "28px", display: "flex", justifyContent: "center" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/crowlogo.png" alt="Crow Market" style={{ width: "76px", height: "76px", objectFit: "contain" }} />
         </div>
