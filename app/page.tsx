@@ -58,7 +58,7 @@ function LandingNav({ scrolled }: { scrolled: boolean }) {
     >
       <Link href="/" style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/crowlogo.png" alt="Crow" style={{ height: "38px", width: "auto", objectFit: "contain" }} />
+        <img src="/crowlogo.png" alt="Crow" style={{ height: "54px", width: "auto", objectFit: "contain" }} />
       </Link>
 
       <div className="lp-nav-links" style={{ display: "flex", gap: "32px", fontSize: "14px" }}>
