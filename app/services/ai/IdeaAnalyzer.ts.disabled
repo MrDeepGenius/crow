@@ -1,0 +1,249 @@
+// ============================================
+// IDEA ANALYZER - Real AI Analysis
+// ============================================
+
+import { AIProvider, AIProviderFactory } from "./AIProvider";
+
+export interface ProductSpecification {
+  productType: "course" | "ebook" | "guide" | "web" | "kit";
+  topic: string;
+  subtopics: string[];
+  level: "beginner" | "intermediate" | "advanced";
+  audience: string;
+  goal: string;
+  language: string;
+  tone: "simple" | "professional" | "academic" | "practical";
+  estimatedDuration: string;
+  learningObjectives: string[];
+  desiredOutcome: string;
+  constraints?: string[];
+  style?: string;
+  preferences?: Record<string, any>;
+  complexity: number; // 1-10
+  prerequisites?: string[];
+  context: string; // Original idea
+}
+
+export class IdeaAnalyzer {
+  private aiProvider: AIProvider;
+
+  constructor(aiProvider?: AIProvider) {
+    this.aiProvider = aiProvider || AIProviderFactory.getInstance();
+  }
+
+  /**
+   * Analiza una idea del usuario y genera especificaciones del producto
+   */
+  async analyzeIdea(idea: string): Promise<ProductSpecification> {
+    const systemPrompt = `Eres un experto diseñador instruccional y analista de productos educativos. Tu trabajo es analizar ideas de usuarios y crear especificaciones detalladas para productos educativos.
+
+REGLAS CRÍTICAS:
+1. Mantén FIDELIDAD ABSOLUTA a la idea original
+2. Si el usuario dice "ciberseguridad", TODO debe ser sobre ciberseguridad
+3. Si dice "para principiantes", el nivel debe ser "beginner"
+4. NO cambies el tema principal
+5. NO agregues temas no relacionados
+6. Sé específico y detallado
+
+Analiza la idea y responde SOLO con JSON válido con esta estructura:
+{
+  "productType": "course",
+  "topic": "tema principal exacto",
+  "subtopics": ["subtema1", "subtema2", ...],
+  "level": "beginner/intermediate/advanced",
+  "audience": "descripción específica del público",
+  "goal": "objetivo principal del producto",
+  "language": "es/en",
+  "tone": "simple/professional/academic/practical", 
+  "estimatedDuration": "duración estimada",
+  "learningObjectives": ["objetivo1", "objetivo2", ...],
+  "desiredOutcome": "resultado esperado",
+  "constraints": ["limitación1", "limitación2", ...],
+  "complexity": 1-10,
+  "prerequisites": ["requisito1", "requisito2", ...],
+  "context": "idea original completa"
+}`;
+
+    const userPrompt = `Analiza esta idea y genera las especificaciones:
+
+"${idea}"
+
+Detecta:
+- Tipo de producto (course, ebook, guide, etc.)
+- Tema principal EXACTO
+- Nivel de dificultad
+- Público objetivo específico
+- Objetivos de aprendizaje
+- Duración estimada
+- Tono apropiado
+- Complejidad del 1-10
+
+IMPORTANTE: Mantén fidelidad total a la idea original. Si dice "ciberseguridad", TODO debe ser sobre ciberseguridad. Si dice "principiantes", el nivel debe ser "beginner".`;
+
+    try {
+      const specification = await this.aiProvider.generateJSON<ProductSpecification>({
+        systemPrompt,
+        userPrompt,
+        temperature: 0.3, // Baja temperatura para análisis consistente
+      });
+
+      // Validar que la especificación tenga sentido
+      this.validateSpecification(specification, idea);
+
+      // Guardar contexto original
+      specification.context = idea;
+
+      return specification;
+    } catch (error) {
+      console.error("Error analyzing idea:", error);
+      
+      // Fallback: Crear especificación básica
+      return this.createFallbackSpecification(idea);
+    }
+  }
+
+  /**
+   * Valida que la especificación generada sea coherente
+   */
+  private validateSpecification(spec: ProductSpecification, originalIdea: string): void {
+    if (!spec.topic || !spec.audience || !spec.goal) {
+      throw new Error("Especificación incompleta generada por IA");
+    }
+
+    // Validar que el tema esté relacionado con la idea original
+    const ideaLower = originalIdea.toLowerCase();
+    const topicLower = spec.topic.toLowerCase();
+    
+    // Lista de palabras clave para validación
+    const keywordMatch = this.extractKeywords(ideaLower);
+    const topicMatch = this.extractKeywords(topicLower);
+    
+    const hasOverlap = keywordMatch.some(keyword => 
+      topicMatch.includes(keyword) || topicLower.includes(keyword)
+    );
+
+    if (!hasOverlap && keywordMatch.length > 0) {
+      console.warn("Posible desviación del tema original detectada");
+    }
+
+    // Validar nivel
+    if (!["beginner", "intermediate", "advanced"].includes(spec.level)) {
+      spec.level = "beginner";
+    }
+
+    // Validar tipo de producto
+    if (!["course", "ebook", "guide", "web", "kit"].includes(spec.productType)) {
+      spec.productType = "course";
+    }
+  }
+
+  /**
+   * Extrae palabras clave de un texto
+   */
+  private extractKeywords(text: string): string[] {
+    const commonWords = ["el", "la", "de", "que", "y", "a", "en", "un", "es", "se", "no", "te", "lo", "le", 
+                        "da", "su", "por", "son", "con", "para", "una", "del", "al", "como", "las", "pero", 
+                        "sus", "me", "hasta", "donde", "desde", "cuando", "muy", "sin", "sobre", "también"];
+    
+    return text
+      .toLowerCase()
+      .replace(/[^\w\sáéíóúñ]/g, '')
+      .split(/\s+/)
+      .filter(word => word.length > 3 && !commonWords.includes(word))
+      .slice(0, 10); // Top 10 palabras clave
+  }
+
+  /**
+   * Crea especificación fallback si la IA falla
+   */
+  private createFallbackSpecification(idea: string): ProductSpecification {
+    const ideaLower = idea.toLowerCase();
+    
+    // Detectar tema principal
+    let topic = "Desarrollo Personal";
+    let subtopics = ["Conceptos Básicos", "Aplicación Práctica"];
+    
+    if (ideaLower.includes("ciberseguridad") || ideaLower.includes("seguridad")) {
+      topic = "Ciberseguridad";
+      subtopics = ["Fundamentos", "Amenazas", "Protección", "Mejores Prácticas"];
+    } else if (ideaLower.includes("programación") || ideaLower.includes("código")) {
+      topic = "Programación";
+      subtopics = ["Fundamentos", "Sintaxis", "Práctica", "Proyectos"];
+    } else if (ideaLower.includes("marketing")) {
+      topic = "Marketing";
+      subtopics = ["Estrategia", "Canales", "Métricas", "Optimización"];
+    }
+
+    // Detectar nivel
+    let level: "beginner" | "intermediate" | "advanced" = "beginner";
+    if (ideaLower.includes("avanzado") || ideaLower.includes("experto")) {
+      level = "advanced";
+    } else if (ideaLower.includes("intermedio")) {
+      level = "intermediate";
+    }
+
+    // Detectar audiencia
+    let audience = "Principiantes";
+    if (ideaLower.includes("sin conocimiento") || ideaLower.includes("principiante")) {
+      audience = "Personas sin conocimientos previos";
+    } else if (ideaLower.includes("profesionales")) {
+      audience = "Profesionales";
+    }
+
+    return {
+      productType: "course",
+      topic,
+      subtopics,
+      level,
+      audience,
+      goal: idea,
+      language: "es",
+      tone: "practical",
+      estimatedDuration: "6-10 horas",
+      learningObjectives: [
+        `Comprender los fundamentos de ${topic}`,
+        `Aplicar conocimientos en contextos reales`,
+        `Desarrollar habilidades prácticas`
+      ],
+      desiredOutcome: `Dominar los conceptos básicos de ${topic}`,
+      complexity: level === "beginner" ? 3 : level === "intermediate" ? 6 : 8,
+      context: idea
+    };
+  }
+
+  /**
+   * Refina una especificación existente con más contexto
+   */
+  async refineSpecification(
+    specification: ProductSpecification, 
+    additionalContext: string
+  ): Promise<ProductSpecification> {
+    const systemPrompt = `Refina esta especificación de producto con el contexto adicional proporcionado. 
+Mantén la fidelidad al tema original pero incorpora las mejoras sugeridas.`;
+
+    const userPrompt = `Especificación actual:
+${JSON.stringify(specification, null, 2)}
+
+Contexto adicional:
+"${additionalContext}"
+
+Refina la especificación manteniendo el tema principal pero incorporando las mejoras.
+Responde SOLO con JSON válido.`;
+
+    try {
+      const refined = await this.aiProvider.generateJSON<ProductSpecification>({
+        systemPrompt,
+        userPrompt,
+        temperature: 0.4,
+      });
+
+      // Mantener contexto original
+      refined.context = specification.context;
+      
+      return refined;
+    } catch (error) {
+      console.error("Error refining specification:", error);
+      return specification;
+    }
+  }
+}

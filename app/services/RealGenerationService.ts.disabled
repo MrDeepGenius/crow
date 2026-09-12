@@ -1,0 +1,295 @@
+// ============================================
+// REAL GENERATION SERVICE
+// ============================================
+// Servicio que maneja la generación real de cursos con IA
+
+import { CourseGenerationEngine } from "./ai/CourseGenerationEngine";
+import type { GenerationProgress, GeneratedCourse } from "./ai/CourseGenerationEngine";
+import { AIProviderFactory, AIProviderType } from "./ai/AIProvider";
+import { AI_CONFIG } from "@/app/config/ai";
+
+export interface GenerationJob {
+  id: string;
+  idea: string;
+  type: "course" | "ebook" | "guide" | "web" | "kit";
+  status: "pending" | "running" | "completed" | "failed" | "cancelled";
+  progress: GenerationProgress;
+  result?: GeneratedCourse;
+  error?: string;
+  createdAt: string;
+  completedAt?: string;
+}
+
+export class RealGenerationService {
+  private static instance: RealGenerationService;
+  private activeJobs: Map<string, GenerationJob> = new Map();
+  private engine: CourseGenerationEngine;
+
+  constructor() {
+    // Usar configuración optimizada de IA
+    const aiConfig = getOptimizedAIConfig();
+    console.log(`🤖 Configurando Crow con proveedor: ${aiConfig.provider}`);
+
+    const aiProvider = AIProviderFactory.createProvider(aiConfig);
+    this.engine = new CourseGenerationEngine(aiProvider);
+  }
+
+  static getInstance(): RealGenerationService {
+    if (!RealGenerationService.instance) {
+      RealGenerationService.instance = new RealGenerationService();
+    }
+    return RealGenerationService.instance;
+  }
+
+  /**
+   * Inicia la generación real de un curso
+   */
+  async startCourseGeneration(
+    idea: string,
+    progressCallback?: (progress: GenerationProgress) => void
+  ): Promise<string> {
+    const jobId = `job-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    const job: GenerationJob = {
+      id: jobId,
+      idea,
+      type: "course",
+      status: "pending",
+      progress: {
+        phase: "analyzing",
+        step: "Inicializando",
+        progress: 0,
+        message: "Preparando generación...",
+        isComplete: false
+      },
+      createdAt: new Date().toISOString()
+    };
+
+    this.activeJobs.set(jobId, job);
+    
+    // Iniciar generación asíncrona
+    this.runGenerationJob(job, progressCallback).catch(error => {
+      console.error(`Error in generation job ${jobId}:`, error);
+      job.status = "failed";
+      job.error = error.message;
+      this.activeJobs.set(jobId, job);
+    });
+
+    return jobId;
+  }
+
+  /**
+   * Ejecuta un job de generación
+   */
+  private async runGenerationJob(
+    job: GenerationJob,
+    progressCallback?: (progress: GenerationProgress) => void
+  ): Promise<void> {
+    job.status = "running";
+    
+    const wrappedCallback = (progress: GenerationProgress) => {
+      job.progress = progress;
+      
+      if (progress.phase === "complete") {
+        job.status = "completed";
+        job.completedAt = new Date().toISOString();
+      } else if (progress.phase === "error") {
+        job.status = "failed";
+        job.error = progress.error;
+      }
+      
+      this.activeJobs.set(job.id, job);
+      
+      if (progressCallback) {
+        progressCallback(progress);
+      }
+    };
+
+    try {
+      const result = await this.engine.generateCourse(job.idea, wrappedCallback);
+      job.result = result;
+      job.status = "completed";
+      job.completedAt = new Date().toISOString();
+      
+    } catch (error: any) {
+      job.status = "failed";
+      job.error = error.message;
+      
+      job.progress = {
+        phase: "error",
+        step: "Error",
+        progress: 0,
+        message: `Error: ${error.message}`,
+        isComplete: false,
+        error: error.message
+      };
+    }
+    
+    this.activeJobs.set(job.id, job);
+  }
+
+  /**
+   * Obtiene el estado de un job
+   */
+  getJobStatus(jobId: string): GenerationJob | null {
+    return this.activeJobs.get(jobId) || null;
+  }
+
+  /**
+   * Obtiene todos los jobs activos
+   */
+  getActiveJobs(): GenerationJob[] {
+    return Array.from(this.activeJobs.values());
+  }
+
+  /**
+   * Cancela un job de generación
+   */
+  cancelJob(jobId: string): boolean {
+    const job = this.activeJobs.get(jobId);
+    if (!job || job.status === "completed") {
+      return false;
+    }
+
+    job.status = "cancelled";
+    job.progress = {
+      phase: "error",
+      step: "Cancelado",
+      progress: 0,
+      message: "Generación cancelada por el usuario",
+      isComplete: false
+    };
+    
+    this.activeJobs.set(jobId, job);
+    return true;
+  }
+
+  /**
+   * Limpia jobs antiguos
+   */
+  cleanupOldJobs(maxAge: number = 24 * 60 * 60 * 1000): void {
+    const now = Date.now();
+    
+    for (const [jobId, job] of this.activeJobs.entries()) {
+      const jobAge = now - new Date(job.createdAt).getTime();
+      
+      if (jobAge > maxAge && (job.status === "completed" || job.status === "failed")) {
+        this.activeJobs.delete(jobId);
+      }
+    }
+  }
+
+  /**
+   * Convierte resultado a formato compatible con el sistema actual
+   */
+  convertToLegacyFormat(generatedCourse: GeneratedCourse): any {
+    // Convertir el curso generado al formato que espera el preview actual
+    return {
+      id: generatedCourse.id,
+      metadata: {
+        title: generatedCourse.blueprint.title,
+        subtitle: generatedCourse.blueprint.subtitle,
+        description: generatedCourse.blueprint.description,
+        author: "Crow AI",
+        authorBio: "Generado por Crow Course Studio con IA real",
+        language: generatedCourse.blueprint.language,
+        level: generatedCourse.blueprint.level,
+        category: generatedCourse.specification.topic,
+        tags: generatedCourse.specification.subtopics,
+        createdAt: generatedCourse.metadata.generatedAt,
+        updatedAt: generatedCourse.metadata.generatedAt,
+      },
+      
+      branding: {
+        primaryColor: "#7c3aed",
+        secondaryColor: "#9333ea", 
+        accentColor: "#c084fc",
+        textStyle: "modern",
+        coverImageStatus: "pending"
+      },
+      
+      modules: generatedCourse.modules.map(module => ({
+        id: module.id,
+        title: module.title,
+        description: module.description,
+        order: module.order,
+        estimatedHours: this.parseHours(module.estimatedDuration),
+        lessons: module.lessons.map(lesson => ({
+          id: lesson.id,
+          title: lesson.title,
+          description: lesson.objective,
+          order: lesson.sections.findIndex(s => s.type === "heading") + 1,
+          duration: lesson.estimatedDuration,
+          
+          content: {
+            video: lesson.video.enabled ? {
+              type: "video",
+              status: lesson.video.status,
+              duration: lesson.video.duration,
+              title: lesson.video.title,
+              description: lesson.video.description,
+              script: lesson.video.script,
+              videoUrl: lesson.video.url,
+              thumbnail: lesson.video.thumbnail
+            } : undefined,
+            
+            text: {
+              type: "text",
+              blocks: lesson.sections.map((section, index) => ({
+                type: section.type,
+                content: section.title ? `${section.title}\n\n${section.content}` : section.content,
+                order: section.order || index
+              }))
+            },
+            
+            activity: lesson.activity,
+            quiz: lesson.quiz,
+            resources: lesson.resources
+          },
+          
+          objectives: [lesson.objective],
+          keyTakeaways: lesson.keyPoints
+        }))
+      })),
+      
+      finalExam: generatedCourse.finalExam,
+      certificate: generatedCourse.certificate ? {
+        enabled: generatedCourse.certificate.enabled,
+        title: generatedCourse.certificate.title,
+        description: generatedCourse.certificate.description,
+        conditions: {
+          requireAllLessons: true,
+          requireFinalExam: !!generatedCourse.finalExam,
+          minimumScore: 70
+        }
+      } : undefined,
+      
+      stats: generatedCourse.metadata
+    };
+  }
+
+  /**
+   * Parsea duración a horas
+   */
+  private parseHours(duration: string): number {
+    const match = duration.match(/(\d+)/);
+    return match ? parseInt(match[1]) : 1;
+  }
+
+  /**
+   * Configura proveedor de IA
+   */
+  configureAIProvider(config: AIProviderConfig): void {
+    const aiProvider = AIProviderFactory.createProvider(config);
+    this.engine = new CourseGenerationEngine(aiProvider);
+  }
+
+  /**
+   * Verifica si hay IA real disponible
+   */
+  isRealAIAvailable(): boolean {
+    // Aquí puedes verificar si hay API keys configuradas
+    // Por ahora devolvemos false para usar mock
+    return false;
+  }
+}

@@ -1,0 +1,432 @@
+// ============================================
+// COURSE ARCHITECT - Real Course Design
+// ============================================
+
+import { AIProvider, AIProviderFactory } from "./AIProvider";
+import { ProductSpecification } from "./IdeaAnalyzer";
+
+export interface CourseBlueprint {
+  id: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  objectives: string[];
+  audience: string;
+  level: string;
+  language: string;
+  estimatedDuration: string;
+  
+  modules: CourseModule[];
+  
+  finalExam: {
+    enabled: boolean;
+    questions: number;
+    passingScore: number;
+    timeLimit?: number;
+  };
+  
+  certificate: {
+    enabled: boolean;
+    requirements: string[];
+  };
+  
+  resources: {
+    videos: number;
+    documents: number;
+    activities: number;
+    quizzes: number;
+  };
+
+  metadata: {
+    createdAt: string;
+    specification: ProductSpecification;
+    version: string;
+  };
+}
+
+export interface CourseModule {
+  id: string;
+  title: string;
+  description: string;
+  order: number;
+  objectives: string[];
+  lessons: CourseLesson[];
+  estimatedDuration: string;
+}
+
+export interface CourseLesson {
+  id: string;
+  title: string;
+  description: string;
+  order: number;
+  objectives: string[];
+  
+  contentType: {
+    hasVideo: boolean;
+    hasText: boolean;
+    hasImages: boolean;
+    hasActivity: boolean;
+    hasQuiz: boolean;
+    hasResources: boolean;
+  };
+  
+  learningMethod: "conceptual" | "practical" | "mixed" | "assessment";
+  estimatedDuration: string;
+  difficulty: 1 | 2 | 3 | 4 | 5;
+}
+
+export class CourseArchitect {
+  private aiProvider: AIProvider;
+
+  constructor(aiProvider?: AIProvider) {
+    this.aiProvider = aiProvider || AIProviderFactory.getInstance();
+  }
+
+  /**
+   * Diseña un curso completo basado en la especificación
+   */
+  async designCourse(specification: ProductSpecification): Promise<CourseBlueprint> {
+    console.log("🎯 Diseñando estructura del curso...");
+
+    const systemPrompt = `Eres un diseñador instruccional experto. Tu trabajo es crear la arquitectura completa de un curso basado en especificaciones detalladas.
+
+REGLAS CRÍTICAS:
+1. FIDELIDAD ABSOLUTA al tema y especificación
+2. Diseño pedagógico profesional
+3. Estructura lógica y progresiva
+4. Objetivos de aprendizaje específicos y medibles
+5. Variedad en métodos de enseñanza
+6. Balance entre teoría y práctica
+
+PRINCIPIOS PEDAGÓGICOS:
+- Progresión de lo simple a lo complejo
+- Refuerzo de conceptos clave
+- Aplicación práctica temprana
+- Evaluación continua
+- Variedad en tipos de contenido
+
+Crea un blueprint completo respondiendo SOLO con JSON válido.`;
+
+    const userPrompt = `Diseña un curso completo basado en esta especificación:
+
+ESPECIFICACIÓN:
+${JSON.stringify(specification, null, 2)}
+
+REQUERIMIENTOS:
+1. Título atractivo y descriptivo
+2. 4-8 módulos según la complejidad (${specification.complexity}/10)
+3. 3-6 lecciones por módulo
+4. Objetivos específicos por módulo y lección
+5. Variedad en métodos de aprendizaje
+6. Progresión lógica del contenido
+7. Evaluación apropiada para el nivel
+8. Certificado si es apropiado
+
+ESTRUCTURA JSON:
+{
+  "title": "Título del curso",
+  "subtitle": "Subtítulo descriptivo", 
+  "description": "Descripción completa",
+  "objectives": ["objetivo1", "objetivo2", ...],
+  "audience": "${specification.audience}",
+  "level": "${specification.level}",
+  "language": "${specification.language}",
+  "estimatedDuration": "X-Y horas",
+  "modules": [
+    {
+      "title": "Título del módulo",
+      "description": "Descripción del módulo",
+      "order": 1,
+      "objectives": ["objetivo1", "objetivo2"],
+      "estimatedDuration": "X horas",
+      "lessons": [
+        {
+          "title": "Título de lección",
+          "description": "Qué aprenderá el estudiante",
+          "order": 1,
+          "objectives": ["objetivo específico"],
+          "contentType": {
+            "hasVideo": true/false,
+            "hasText": true,
+            "hasImages": true/false,
+            "hasActivity": true/false,
+            "hasQuiz": true/false,
+            "hasResources": true/false
+          },
+          "learningMethod": "conceptual/practical/mixed/assessment",
+          "estimatedDuration": "X minutos",
+          "difficulty": 1-5
+        }
+      ]
+    }
+  ],
+  "finalExam": {
+    "enabled": true/false,
+    "questions": number,
+    "passingScore": percentage,
+    "timeLimit": minutes
+  },
+  "certificate": {
+    "enabled": true/false,
+    "requirements": ["requisito1", "requisito2"]
+  },
+  "resources": {
+    "videos": count,
+    "documents": count,
+    "activities": count,
+    "quizzes": count
+  }
+}
+
+IMPORTANTE: El curso debe ser sobre "${specification.topic}" exclusivamente. Todas las lecciones deben contribuir a "${specification.goal}".`;
+
+    try {
+      const blueprintData = await this.aiProvider.generateJSON({
+        systemPrompt,
+        userPrompt,
+        temperature: 0.4,
+        maxTokens: 4000,
+      });
+
+      // Construir blueprint completo
+      const blueprint: CourseBlueprint = {
+        id: `course-${Date.now()}`,
+        title: blueprintData.title,
+        subtitle: blueprintData.subtitle,
+        description: blueprintData.description,
+        objectives: blueprintData.objectives,
+        audience: specification.audience,
+        level: specification.level,
+        language: specification.language,
+        estimatedDuration: blueprintData.estimatedDuration,
+        
+        modules: this.processModules(blueprintData.modules),
+        
+        finalExam: blueprintData.finalExam || {
+          enabled: specification.level !== "beginner",
+          questions: 10,
+          passingScore: 70,
+          timeLimit: 30
+        },
+        
+        certificate: blueprintData.certificate || {
+          enabled: true,
+          requirements: ["Completar todas las lecciones", "Aprobar evaluaciones"]
+        },
+        
+        resources: blueprintData.resources || {
+          videos: 0,
+          documents: 0,
+          activities: 0,
+          quizzes: 0
+        },
+
+        metadata: {
+          createdAt: new Date().toISOString(),
+          specification,
+          version: "1.0"
+        }
+      };
+
+      // Validar y ajustar blueprint
+      this.validateBlueprint(blueprint, specification);
+      
+      console.log("✓ Estructura del curso diseñada");
+      return blueprint;
+
+    } catch (error) {
+      console.error("Error designing course:", error);
+      return this.createFallbackBlueprint(specification);
+    }
+  }
+
+  /**
+   * Procesa módulos del JSON generado
+   */
+  private processModules(modulesData: any[]): CourseModule[] {
+    return modulesData.map((moduleData, index) => ({
+      id: `module-${index + 1}`,
+      title: moduleData.title,
+      description: moduleData.description,
+      order: index + 1,
+      objectives: moduleData.objectives || [],
+      estimatedDuration: moduleData.estimatedDuration,
+      lessons: this.processLessons(moduleData.lessons, index + 1)
+    }));
+  }
+
+  /**
+   * Procesa lecciones del JSON generado
+   */
+  private processLessons(lessonsData: any[], moduleNumber: number): CourseLesson[] {
+    return lessonsData.map((lessonData, index) => ({
+      id: `lesson-${moduleNumber}-${index + 1}`,
+      title: lessonData.title,
+      description: lessonData.description,
+      order: index + 1,
+      objectives: lessonData.objectives || [],
+      contentType: {
+        hasVideo: lessonData.contentType?.hasVideo ?? true,
+        hasText: lessonData.contentType?.hasText ?? true,
+        hasImages: lessonData.contentType?.hasImages ?? false,
+        hasActivity: lessonData.contentType?.hasActivity ?? true,
+        hasQuiz: lessonData.contentType?.hasQuiz ?? true,
+        hasResources: lessonData.contentType?.hasResources ?? false
+      },
+      learningMethod: lessonData.learningMethod || "mixed",
+      estimatedDuration: lessonData.estimatedDuration,
+      difficulty: lessonData.difficulty || 3
+    }));
+  }
+
+  /**
+   * Valida que el blueprint sea coherente
+   */
+  private validateBlueprint(blueprint: CourseBlueprint, specification: ProductSpecification): void {
+    // Validar que hay módulos
+    if (!blueprint.modules || blueprint.modules.length === 0) {
+      throw new Error("Blueprint debe tener al menos un módulo");
+    }
+
+    // Validar que cada módulo tenga lecciones
+    blueprint.modules.forEach(module => {
+      if (!module.lessons || module.lessons.length === 0) {
+        throw new Error(`Módulo ${module.title} debe tener al menos una lección`);
+      }
+    });
+
+    // Calcular recursos
+    let totalVideos = 0;
+    let totalActivities = 0;
+    let totalQuizzes = 0;
+    let totalDocuments = 0;
+
+    blueprint.modules.forEach(module => {
+      module.lessons.forEach(lesson => {
+        if (lesson.contentType.hasVideo) totalVideos++;
+        if (lesson.contentType.hasActivity) totalActivities++;
+        if (lesson.contentType.hasQuiz) totalQuizzes++;
+        if (lesson.contentType.hasResources) totalDocuments++;
+      });
+    });
+
+    blueprint.resources = {
+      videos: totalVideos,
+      documents: totalDocuments,
+      activities: totalActivities,
+      quizzes: totalQuizzes
+    };
+  }
+
+  /**
+   * Crea blueprint fallback si la IA falla
+   */
+  private createFallbackBlueprint(specification: ProductSpecification): CourseBlueprint {
+    console.log("Creando blueprint fallback...");
+
+    const modules: CourseModule[] = [
+      {
+        id: "module-1",
+        title: `Introducción a ${specification.topic}`,
+        description: `Conceptos fundamentales de ${specification.topic}`,
+        order: 1,
+        objectives: [`Entender qué es ${specification.topic}`],
+        estimatedDuration: "2 horas",
+        lessons: [
+          {
+            id: "lesson-1-1",
+            title: `¿Qué es ${specification.topic}?`,
+            description: `Definición y conceptos básicos`,
+            order: 1,
+            objectives: [`Definir ${specification.topic}`],
+            contentType: {
+              hasVideo: true,
+              hasText: true,
+              hasImages: false,
+              hasActivity: true,
+              hasQuiz: true,
+              hasResources: false
+            },
+            learningMethod: "conceptual",
+            estimatedDuration: "20 minutos",
+            difficulty: 2
+          }
+        ]
+      }
+    ];
+
+    return {
+      id: `course-${Date.now()}`,
+      title: `${specification.topic} para ${specification.audience}`,
+      subtitle: `Curso ${specification.level} de ${specification.topic}`,
+      description: specification.goal,
+      objectives: specification.learningObjectives,
+      audience: specification.audience,
+      level: specification.level,
+      language: specification.language,
+      estimatedDuration: specification.estimatedDuration,
+      modules,
+      finalExam: {
+        enabled: false,
+        questions: 5,
+        passingScore: 70
+      },
+      certificate: {
+        enabled: true,
+        requirements: ["Completar todas las lecciones"]
+      },
+      resources: {
+        videos: 1,
+        documents: 0,
+        activities: 1,
+        quizzes: 1
+      },
+      metadata: {
+        createdAt: new Date().toISOString(),
+        specification,
+        version: "1.0-fallback"
+      }
+    };
+  }
+
+  /**
+   * Refina un blueprint existente
+   */
+  async refineBlueprint(
+    blueprint: CourseBlueprint, 
+    feedback: string
+  ): Promise<CourseBlueprint> {
+    const systemPrompt = `Refina este blueprint de curso basado en el feedback proporcionado.
+Mantén la coherencia pedagógica y la fidelidad al tema original.`;
+
+    const userPrompt = `Blueprint actual:
+${JSON.stringify(blueprint, null, 2)}
+
+Feedback para mejoras:
+"${feedback}"
+
+Refina el blueprint incorporando las mejoras sugeridas.
+Responde SOLO con JSON válido.`;
+
+    try {
+      const refined = await this.aiProvider.generateJSON({
+        systemPrompt,
+        userPrompt,
+        temperature: 0.3,
+      });
+
+      return {
+        ...blueprint,
+        ...refined,
+        id: blueprint.id, // Mantener ID original
+        metadata: {
+          ...blueprint.metadata,
+          version: blueprint.metadata.version + "-refined"
+        }
+      };
+    } catch (error) {
+      console.error("Error refining blueprint:", error);
+      return blueprint;
+    }
+  }
+}

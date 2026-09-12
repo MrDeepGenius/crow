@@ -1,0 +1,1132 @@
+// ============================================
+// CROW COURSE STUDIO - PROFESSIONAL PLATFORM
+// ============================================
+
+"use client";
+
+import { useState, useMemo } from "react";
+import { GeneratedCourse, GeneratedModule, GeneratedLesson } from "@/app/types";
+
+interface StudioProps {
+  course: GeneratedCourse;
+}
+
+export function ProfessionalCourseStudio({ course }: StudioProps) {
+  const [currentModuleIdx, setCurrentModuleIdx] = useState(0);
+  const [currentLessonIdx, setCurrentLessonIdx] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState<
+    "video" | "content" | "activity" | "quiz" | "resources"
+  >("video");
+  const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
+  const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({});
+  const [showConfigPanel, setShowConfigPanel] = useState(false);
+
+  const currentModule = course.modules[currentModuleIdx];
+  const currentLesson = currentModule?.lessons[currentLessonIdx];
+
+  const totalLessons = course.stats.totalLessons;
+  const completedCount = completedLessons.size;
+  const progressPercent = Math.round((completedCount / totalLessons) * 100);
+
+  const markLessonComplete = () => {
+    const lessonId = currentLesson.id;
+    setCompletedLessons(prev => new Set([...prev, lessonId]));
+
+    // Auto-avanzar
+    if (currentLessonIdx < currentModule.lessons.length - 1) {
+      setCurrentLessonIdx(currentLessonIdx + 1);
+      setActiveTab("content");
+    } else if (currentModuleIdx < course.modules.length - 1) {
+      setCurrentModuleIdx(currentModuleIdx + 1);
+      setCurrentLessonIdx(0);
+      setActiveTab("content");
+    }
+  };
+
+  const isLessonComplete = completedLessons.has(currentLesson.id);
+  const isCourseComplete = completedLessons.size === totalLessons;
+
+  if (showConfigPanel) {
+    return (
+      <ConfigPanel
+        course={course}
+        onClose={() => setShowConfigPanel(false)}
+      />
+    );
+  }
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        minHeight: "100vh",
+        background: "#f5f5f5",
+        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+      }}
+    >
+      {/* SIDEBAR */}
+      <aside
+        style={{
+          width: sidebarOpen ? "340px" : "0",
+          background: "#1a1a2e",
+          color: "#fff",
+          overflowY: "auto",
+          transition: "width 0.3s",
+          flexShrink: 0,
+          borderRight: "1px solid #2d2d4d",
+        }}
+      >
+        <div style={{ padding: "24px 20px" }}>
+          {/* CLOSE BUTTON */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "24px",
+            }}
+          >
+            <h3 style={{ margin: 0, fontSize: "14px", fontWeight: "bold" }}>
+              {course.metadata.title}
+            </h3>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "#fff",
+                cursor: "pointer",
+                fontSize: "18px",
+              }}
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* PROGRESS CARD */}
+          <div
+            style={{
+              marginBottom: "24px",
+              padding: "16px",
+              borderRadius: "12px",
+              background: `linear-gradient(135deg, ${course.branding.primaryColor}, ${course.branding.secondaryColor})`,
+            }}
+          >
+            <div
+              style={{
+                fontSize: "12px",
+                color: "rgba(255,255,255,0.8)",
+                marginBottom: "8px",
+              }}
+            >
+              Tu progreso
+            </div>
+            <div
+              style={{
+                fontSize: "24px",
+                fontWeight: "bold",
+                color: "#fff",
+                marginBottom: "8px",
+              }}
+            >
+              {progressPercent}%
+            </div>
+            <div
+              style={{
+                height: "6px",
+                borderRadius: "3px",
+                background: "rgba(255,255,255,0.2)",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  height: "100%",
+                  background: "#fff",
+                  width: `${progressPercent}%`,
+                  transition: "width 0.3s",
+                }}
+              />
+            </div>
+            <div
+              style={{
+                fontSize: "12px",
+                color: "rgba(255,255,255,0.8)",
+                marginTop: "8px",
+              }}
+            >
+              {completedCount} de {totalLessons} lecciones
+            </div>
+          </div>
+
+          {/* MODULES */}
+          {course.modules.map((module, modIdx) => (
+            <div key={module.id} style={{ marginBottom: "16px" }}>
+              <button
+                onClick={() => {
+                  setCurrentModuleIdx(modIdx);
+                  setCurrentLessonIdx(0);
+                }}
+                style={{
+                  width: "100%",
+                  textAlign: "left",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  border: "none",
+                  background:
+                    currentModuleIdx === modIdx
+                      ? `rgba(124, 58, 237, 0.2)`
+                      : "transparent",
+                  color: "#fff",
+                  cursor: "pointer",
+                  fontSize: "13px",
+                  fontWeight: "bold",
+                  marginBottom: "6px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span
+                    style={{
+                      width: "24px",
+                      height: "24px",
+                      borderRadius: "6px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background:
+                        currentModuleIdx === modIdx
+                          ? course.branding.primaryColor
+                          : "#333",
+                      fontSize: "11px",
+                    }}
+                  >
+                    {modIdx + 1}
+                  </span>
+                  {module.title}
+                </div>
+              </button>
+
+              {currentModuleIdx === modIdx && (
+                <div style={{ paddingLeft: "12px" }}>
+                  {module.lessons.map((lesson, lesIdx) => {
+                    const isCompleted = progress.completedLessons.has(lesson.id);
+                    const isActive = currentLessonIdx === lesIdx;
+
+                    return (
+                      <button
+                        key={lesson.id}
+                        onClick={() => setCurrentLessonIdx(lesIdx)}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "10px 12px",
+                          borderRadius: "6px",
+                          border: "none",
+                          background: isActive
+                            ? `rgba(124, 58, 237, 0.3)`
+                            : "rgba(255,255,255,0.05)",
+                          color: "#ddd",
+                          cursor: "pointer",
+                          marginBottom: "4px",
+                          fontSize: "12px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: "14px",
+                            height: "14px",
+                            borderRadius: "50%",
+                            border: isCompleted
+                              ? "none"
+                              : "1.5px solid #666",
+                            background: isCompleted
+                              ? "#22c55e"
+                              : "transparent",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "8px",
+                            color: "#fff",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {isCompleted ? "✓" : ""}
+                        </span>
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {lesson.title}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </aside>
+
+      {/* MAIN CONTENT */}
+      <main
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          overflowY: "auto",
+        }}
+      >
+        {/* TOP BAR */}
+        <header
+          style={{
+            height: "70px",
+            background: "#fff",
+            borderBottom: "1px solid #e5e7eb",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "0 30px",
+            flexShrink: 0,
+          }}
+        >
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "#1a1a2e",
+              cursor: "pointer",
+              fontSize: "22px",
+            }}
+          >
+            ☰
+          </button>
+
+          <h1
+            style={{
+              margin: 0,
+              fontSize: "18px",
+              fontWeight: "bold",
+              color: "#1a1a2e",
+            }}
+          >
+            {course.metadata.title}
+          </h1>
+
+          <button
+            onClick={() => setShowConfigPanel(true)}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "6px",
+              border: "1px solid #d1d5db",
+              background: "#fff",
+              color: "#1a1a2e",
+              cursor: "pointer",
+              fontSize: "13px",
+            }}
+          >
+            ⚙️ Configuración
+          </button>
+        </header>
+
+        {/* CONTENT AREA */}
+        <div
+          style={{
+            flex: 1,
+            padding: "30px",
+            overflowY: "auto",
+          }}
+        >
+          {currentLesson && (
+            <>
+              {/* LESSON HEADER */}
+              <div style={{ marginBottom: "30px" }}>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#666",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Módulo {currentModuleIdx + 1} • Lección {currentLessonIdx + 1} de{" "}
+                  {currentModule.lessons.length}
+                </div>
+                <h1
+                  style={{
+                    margin: "0 0 8px",
+                    fontSize: "32px",
+                    fontWeight: "bold",
+                    color: "#1a1a2e",
+                  }}
+                >
+                  {currentLesson.title}
+                </h1>
+                <p
+                  style={{
+                    margin: "0",
+                    color: "#666",
+                    fontSize: "15px",
+                  }}
+                >
+                  {currentLesson.description}
+                </p>
+                <div
+                  style={{
+                    marginTop: "12px",
+                    fontSize: "13px",
+                    color: "#999",
+                    display: "flex",
+                    gap: "20px",
+                  }}
+                >
+                  <span>⏱️ {currentLesson.duration}</span>
+                  <span>📚 {currentLesson.objectives.length} objetivos</span>
+                  {currentLesson.content.quiz && (
+                    <span>✓ Incluye quiz</span>
+                  )}
+                </div>
+              </div>
+
+              {/* TABS */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: "12px",
+                  marginBottom: "24px",
+                  borderBottom: "2px solid #e5e7eb",
+                  paddingBottom: "0",
+                }}
+              >
+                {currentLesson.content.video && (
+                  <TabButton
+                    active={activeTab === "video"}
+                    onClick={() => setActiveTab("video")}
+                    label="▶️ Video"
+                  />
+                )}
+                {currentLesson.content.text && (
+                  <TabButton
+                    active={activeTab === "content"}
+                    onClick={() => setActiveTab("content")}
+                    label="📖 Contenido"
+                  />
+                )}
+                {currentLesson.content.activity && (
+                  <TabButton
+                    active={activeTab === "activity"}
+                    onClick={() => setActiveTab("activity")}
+                    label="✏️ Actividad"
+                  />
+                )}
+                {currentLesson.content.quiz && (
+                  <TabButton
+                    active={activeTab === "quiz"}
+                    onClick={() => setActiveTab("quiz")}
+                    label="❓ Quiz"
+                  />
+                )}
+                {currentLesson.content.resources &&
+                  currentLesson.content.resources.length > 0 && (
+                    <TabButton
+                      active={activeTab === "resources"}
+                      onClick={() => setActiveTab("resources")}
+                      label="📚 Recursos"
+                    />
+                  )}
+              </div>
+
+              {/* CONTENT SECTIONS */}
+              {activeTab === "video" && currentLesson.content.video && (
+                <VideoSection video={currentLesson.content.video} />
+              )}
+
+              {activeTab === "content" && currentLesson.content.text && (
+                <TextContentSection text={currentLesson.content.text} />
+              )}
+
+              {activeTab === "activity" && currentLesson.content.activity && (
+                <ActivitySection activity={currentLesson.content.activity} />
+              )}
+
+              {activeTab === "quiz" && currentLesson.content.quiz && (
+                <QuizSection
+                  quiz={currentLesson.content.quiz}
+                  answers={quizAnswers}
+                  onAnswerChange={(qId: string, answer: string) =>
+                    setQuizAnswers({ ...quizAnswers, [qId]: answer })
+                  }
+                />
+              )}
+
+              {activeTab === "resources" && currentLesson.content.resources && (
+                <ResourcesSection resources={currentLesson.content.resources} />
+              )}
+
+              {/* FOOTER NAVIGATION */}
+              <div
+                style={{
+                  marginTop: "40px",
+                  paddingTop: "24px",
+                  borderTop: "1px solid #e5e7eb",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <button
+                  onClick={() => {
+                    if (currentLessonIdx > 0) {
+                      setCurrentLessonIdx(currentLessonIdx - 1);
+                      setActiveTab("video");
+                    } else if (currentModuleIdx > 0) {
+                      setCurrentModuleIdx(currentModuleIdx - 1);
+                      setCurrentLessonIdx(
+                        course.modules[currentModuleIdx - 1].lessons.length - 1
+                      );
+                      setActiveTab("video");
+                    }
+                  }}
+                  disabled={currentModuleIdx === 0 && currentLessonIdx === 0}
+                  style={{
+                    padding: "10px 20px",
+                    borderRadius: "6px",
+                    border: "1px solid #d1d5db",
+                    background: "#fff",
+                    color: "#1a1a2e",
+                    cursor:
+                      currentModuleIdx === 0 && currentLessonIdx === 0
+                        ? "not-allowed"
+                        : "pointer",
+                    opacity:
+                      currentModuleIdx === 0 && currentLessonIdx === 0 ? 0.5 : 1,
+                  }}
+                >
+                  ← Lección anterior
+                </button>
+
+                {isCourseComplete && (
+                  <div style={{ textAlign: "center", color: "#22c55e" }}>
+                    🎓 ¡Curso completado!
+                  </div>
+                )}
+
+                <button
+                  onClick={markLessonComplete}
+                  disabled={isLessonComplete}
+                  style={{
+                    padding: "10px 24px",
+                    borderRadius: "6px",
+                    border: "none",
+                    background: isLessonComplete
+                      ? "#9ca3af"
+                      : `linear-gradient(135deg, ${course.branding.primaryColor}, ${course.branding.secondaryColor})`,
+                    color: "#fff",
+                    fontWeight: "bold",
+                    cursor: isLessonComplete ? "default" : "pointer",
+                    opacity: isLessonComplete ? 0.6 : 1,
+                  }}
+                >
+                  {isLessonComplete ? "✓ Completada" : "Completar lección"}
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (
+                      currentLessonIdx <
+                      currentModule.lessons.length - 1
+                    ) {
+                      setCurrentLessonIdx(currentLessonIdx + 1);
+                      setActiveTab("video");
+                    } else if (
+                      currentModuleIdx <
+                      course.modules.length - 1
+                    ) {
+                      setCurrentModuleIdx(currentModuleIdx + 1);
+                      setCurrentLessonIdx(0);
+                      setActiveTab("video");
+                    }
+                  }}
+                  disabled={
+                    currentModuleIdx === course.modules.length - 1 &&
+                    currentLessonIdx === currentModule.lessons.length - 1
+                  }
+                  style={{
+                    padding: "10px 20px",
+                    borderRadius: "6px",
+                    border: "1px solid #d1d5db",
+                    background: "#fff",
+                    color: "#1a1a2e",
+                    cursor:
+                      currentModuleIdx === course.modules.length - 1 &&
+                      currentLessonIdx === currentModule.lessons.length - 1
+                        ? "not-allowed"
+                        : "pointer",
+                    opacity:
+                      currentModuleIdx === course.modules.length - 1 &&
+                      currentLessonIdx === currentModule.lessons.length - 1
+                        ? 0.5
+                        : 1,
+                  }}
+                >
+                  Siguiente lección →
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+// ============================================
+// COMPONENTS
+// ============================================
+
+function TabButton({
+  active,
+  onClick,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: "12px 16px",
+        border: "none",
+        background: "transparent",
+        color: active ? "#7c3aed" : "#999",
+        cursor: "pointer",
+        fontSize: "14px",
+        fontWeight: active ? "bold" : "normal",
+        borderBottom: active ? "3px solid #7c3aed" : "none",
+        marginBottom: "-2px",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function VideoSection({ video }: any) {
+  return (
+    <div
+      style={{
+        borderRadius: "12px",
+        overflow: "hidden",
+        background: "#000",
+        aspectRatio: "16/9",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: "30px",
+      }}
+    >
+      {video.status === "pending" ? (
+        <div style={{ textAlign: "center", color: "#fff" }}>
+          <div style={{ fontSize: "48px", marginBottom: "15px" }}>
+            ▶️
+          </div>
+          <div style={{ fontSize: "14px", color: "#aaa" }}>
+            Video pendiente de generación
+          </div>
+          <div style={{ fontSize: "12px", color: "#666", marginTop: "8px" }}>
+            El video se agregará aquí cuando esté disponible
+          </div>
+        </div>
+      ) : (
+        <video
+          src={video.videoUrl}
+          controls
+          style={{ width: "100%", height: "100%" }}
+        />
+      )}
+    </div>
+  );
+}
+
+function TextContentSection({ text }: any) {
+  return (
+    <div
+      style={{
+        background: "#fff",
+        borderRadius: "12px",
+        padding: "30px",
+        color: "#1a1a2e",
+        lineHeight: "1.8",
+      }}
+    >
+      {text.blocks.map((block: any) => (
+        <div key={block.order} style={{ marginBottom: "20px" }}>
+          {block.type === "heading" && (
+            <h2 style={{ fontSize: "24px", fontWeight: "bold", margin: "0" }}>
+              {block.content}
+            </h2>
+          )}
+          {block.type === "subheading" && (
+            <h3 style={{ fontSize: "18px", fontWeight: "bold", margin: "0" }}>
+              {block.content}
+            </h3>
+          )}
+          {block.type === "paragraph" && (
+            <p style={{ margin: "0", color: "#4b5563" }}>
+              {block.content}
+            </p>
+          )}
+          {block.type === "list" && (
+            <ul style={{ margin: "0", paddingLeft: "20px", color: "#4b5563" }}>
+              {block.content.split("\n").map((item: string, idx: number) => (
+                <li key={idx} style={{ marginBottom: "6px" }}>
+                  {item}
+                </li>
+              ))}
+            </ul>
+          )}
+          {block.type === "highlight" && (
+            <div
+              style={{
+                padding: "15px",
+                borderRadius: "8px",
+                background: "#fef3c7",
+                border: "1px solid #f59e0b",
+                color: "#92400e",
+              }}
+            >
+              {block.content}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ActivitySection({ activity }: any) {
+  const [answer, setAnswer] = useState("");
+
+  return (
+    <div
+      style={{
+        background: "#fff",
+        borderRadius: "12px",
+        padding: "30px",
+        color: "#1a1a2e",
+      }}
+    >
+      <h3 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "20px" }}>
+        ✏️ Actividad Interactiva
+      </h3>
+
+      {activity.type === "multiple-choice" && (
+        <>
+          <p style={{ fontSize: "16px", marginBottom: "20px" }}>
+            {activity.question}
+          </p>
+          {activity.options.map((opt: any) => (
+            <button
+              key={opt.id}
+              onClick={() => setAnswer(opt.id)}
+              style={{
+                display: "block",
+                width: "100%",
+                padding: "12px 16px",
+                marginBottom: "8px",
+                borderRadius: "6px",
+                border: `2px solid ${
+                  answer === opt.id ? "#7c3aed" : "#e5e7eb"
+                }`,
+                background: answer === opt.id ? "#f3e8ff" : "#fff",
+                textAlign: "left",
+                cursor: "pointer",
+              }}
+            >
+              {opt.text}
+            </button>
+          ))}
+          {answer && (
+            <div
+              style={{
+                marginTop: "20px",
+                padding: "15px",
+                borderRadius: "8px",
+                background:
+                  answer === activity.correctOption
+                    ? "#d1fae5"
+                    : "#fee2e2",
+                color: answer === activity.correctOption ? "#065f46" : "#991b1b",
+              }}
+            >
+              {answer === activity.correctOption ? "✓ Correcto" : "✕ Intenta de nuevo"}
+              <div style={{ marginTop: "8px", fontSize: "13px" }}>
+                {activity.explanation}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {activity.type === "checklist" && (
+        <>
+          <p style={{ marginBottom: "20px", color: "#666" }}>
+            {activity.description}
+          </p>
+          {activity.items.map((item: any) => (
+            <label
+              key={item.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                marginBottom: "12px",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                defaultChecked={item.completed}
+                style={{ cursor: "pointer" }}
+              />
+              {item.text}
+            </label>
+          ))}
+        </>
+      )}
+
+      {activity.type === "reflection" && (
+        <>
+          <p style={{ fontSize: "16px", marginBottom: "20px" }}>
+            {activity.question}
+          </p>
+          <textarea
+            placeholder={activity.prompt}
+            style={{
+              width: "100%",
+              minHeight: "120px",
+              padding: "12px",
+              borderRadius: "6px",
+              border: "1px solid #d1d5db",
+              fontFamily: "inherit",
+              resize: "vertical",
+            }}
+          />
+          <div style={{ marginTop: "12px", fontSize: "12px", color: "#666" }}>
+            {activity.minWords} palabras mínimo
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function QuizSection({ quiz, answers, onAnswerChange }: any) {
+  return (
+    <div
+      style={{
+        background: "#fff",
+        borderRadius: "12px",
+        padding: "30px",
+        color: "#1a1a2e",
+      }}
+    >
+      <h3 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "8px" }}>
+        {quiz.title}
+      </h3>
+      <p style={{ color: "#666", marginBottom: "24px" }}>
+        {quiz.description}
+      </p>
+
+      {quiz.questions.map((q: any) => (
+        <div key={q.id} style={{ marginBottom: "30px", paddingBottom: "24px", borderBottom: "1px solid #e5e7eb" }}>
+          <p style={{ fontSize: "15px", fontWeight: "bold", marginBottom: "12px" }}>
+            {q.question}
+          </p>
+          {q.options.map((opt: any) => (
+            <button
+              key={opt.id}
+              onClick={() => onAnswerChange(q.id, opt.id)}
+              style={{
+                display: "block",
+                width: "100%",
+                padding: "10px 12px",
+                marginBottom: "6px",
+                borderRadius: "6px",
+                border: `2px solid ${
+                  answers[q.id] === opt.id ? "#7c3aed" : "#e5e7eb"
+                }`,
+                background:
+                  answers[q.id] === opt.id ? "#f3e8ff" : "#f9fafb",
+                textAlign: "left",
+                cursor: "pointer",
+                fontSize: "14px",
+              }}
+            >
+              {opt.text}
+            </button>
+          ))}
+        </div>
+      ))}
+
+      <button
+        style={{
+          padding: "12px 24px",
+          borderRadius: "6px",
+          border: "none",
+          background: "#7c3aed",
+          color: "#fff",
+          fontWeight: "bold",
+          cursor: "pointer",
+        }}
+      >
+        Enviar respuestas
+      </button>
+    </div>
+  );
+}
+
+function ResourcesSection({ resources }: any) {
+  return (
+    <div
+      style={{
+        background: "#fff",
+        borderRadius: "12px",
+        padding: "30px",
+        color: "#1a1a2e",
+      }}
+    >
+      <h3 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "24px" }}>
+        📚 Recursos de la lección
+      </h3>
+
+      {resources.map((resource: any) => (
+        <div
+          key={resource.id}
+          style={{
+            padding: "16px",
+            marginBottom: "12px",
+            borderRadius: "8px",
+            background: "#f9fafb",
+            border: "1px solid #e5e7eb",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <div>
+            <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
+              {resource.title}
+            </div>
+            <div style={{ fontSize: "13px", color: "#666" }}>
+              {resource.description}
+            </div>
+            {resource.fileStatus === "pending" && (
+              <div
+                style={{
+                  marginTop: "8px",
+                  fontSize: "12px",
+                  color: "#f97316",
+                }}
+              >
+                ⏳ Pendiente de generación
+              </div>
+            )}
+          </div>
+          {resource.fileStatus === "uploaded" && (
+            <button
+              style={{
+                padding: "8px 16px",
+                borderRadius: "6px",
+                border: "1px solid #d1d5db",
+                background: "#fff",
+                cursor: "pointer",
+                fontSize: "13px",
+              }}
+            >
+              ↓ Descargar
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ============================================
+// CONFIG PANEL
+// ============================================
+
+function ConfigPanel({ course, onClose }: any) {
+  const [activeSection, setActiveSection] = useState("general");
+
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "250px 1fr",
+        height: "100vh",
+        background: "#f5f5f5",
+      }}
+    >
+      {/* SIDEBAR */}
+      <div style={{ background: "#1a1a2e", color: "#fff", padding: "24px", borderRight: "1px solid #2d2d4d", overflowY: "auto" }}>
+        <h2 style={{ margin: "0 0 24px", fontSize: "16px", fontWeight: "bold" }}>
+          Configuración del Curso
+        </h2>
+
+        {[
+          { id: "general", label: "📋 General" },
+          { id: "modules", label: "📚 Contenido" },
+          { id: "cert", label: "🎓 Certificación" },
+          { id: "design", label: "🎨 Diseño" },
+        ].map((item) => (
+          <button
+            key={item.id}
+            onClick={() => setActiveSection(item.id)}
+            style={{
+              width: "100%",
+              textAlign: "left",
+              padding: "12px",
+              borderRadius: "6px",
+              border: "none",
+              background: activeSection === item.id ? "rgba(124, 58, 237, 0.2)" : "transparent",
+              color: "#fff",
+              cursor: "pointer",
+              marginBottom: "6px",
+            }}
+          >
+            {item.label}
+          </button>
+        ))}
+
+        <button
+          onClick={onClose}
+          style={{
+            width: "100%",
+            marginTop: "24px",
+            padding: "12px",
+            borderRadius: "6px",
+            border: "none",
+            background: "#333",
+            color: "#fff",
+            cursor: "pointer",
+          }}
+        >
+          ✕ Cerrar
+        </button>
+      </div>
+
+      {/* CONTENT */}
+      <div style={{ padding: "30px", overflowY: "auto" }}>
+        {activeSection === "general" && (
+          <div>
+            <h2 style={{ marginTop: 0 }}>Información General</h2>
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
+                Título
+              </label>
+              <input
+                type="text"
+                defaultValue={course.metadata.title}
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  borderRadius: "6px",
+                  border: "1px solid #d1d5db",
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
+                Descripción
+              </label>
+              <textarea
+                defaultValue={course.metadata.description}
+                style={{
+                  width: "100%",
+                  minHeight: "120px",
+                  padding: "10px",
+                  borderRadius: "6px",
+                  border: "1px solid #d1d5db",
+                  resize: "vertical",
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {activeSection === "modules" && (
+          <div>
+            <h2 style={{ marginTop: 0 }}>Módulos y Contenido</h2>
+            <p style={{ color: "#666" }}>Total de módulos: {course.modules.length}</p>
+            <p style={{ color: "#666" }}>Total de lecciones: {course.stats.totalLessons}</p>
+            <p style={{ color: "#666" }}>Actividades: {course.stats.totalActivities}</p>
+            <p style={{ color: "#666" }}>Quizzes: {course.stats.totalQuizzes}</p>
+          </div>
+        )}
+
+        {activeSection === "cert" && (
+          <div>
+            <h2 style={{ marginTop: 0 }}>Certificación</h2>
+            <label style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
+              <input type="checkbox" defaultChecked={course.certificate.enabled} />
+              <span>Entregar certificado al completar el curso</span>
+            </label>
+            {course.certificate.enabled && (
+              <div style={{ background: "#f9fafb", padding: "16px", borderRadius: "8px" }}>
+                <p style={{ margin: "0 0 12px" }}>
+                  <strong>Condiciones:</strong>
+                </p>
+                <ul style={{ margin: "0", paddingLeft: "20px", fontSize: "14px", color: "#666" }}>
+                  <li>Completar todas las lecciones</li>
+                  <li>Puntuación mínima: {course.certificate.conditions.minimumScore}%</li>
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeSection === "design" && (
+          <div>
+            <h2 style={{ marginTop: 0 }}>Personalización Visual</h2>
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
+                Color Principal
+              </label>
+              <div
+                style={{
+                  width: "50px",
+                  height: "50px",
+                  borderRadius: "8px",
+                  background: course.branding.primaryColor,
+                  border: "2px solid #d1d5db",
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
+                Color Secundario
+              </label>
+              <div
+                style={{
+                  width: "50px",
+                  height: "50px",
+                  borderRadius: "8px",
+                  background: course.branding.secondaryColor,
+                  border: "2px solid #d1d5db",
+                }}
+              />
+            </div>
+            <p style={{ color: "#666", fontSize: "13px" }}>
+              Estilo: {course.branding.textStyle}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

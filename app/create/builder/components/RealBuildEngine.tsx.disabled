@@ -1,0 +1,404 @@
+"use client";
+
+// ============================================
+// REAL BUILD ENGINE - No more simulation
+// ============================================
+
+import { useState, useEffect, useCallback } from "react";
+import { RealGenerationService, GenerationJob } from "@/app/services/RealGenerationService";
+import { GenerationProgress } from "@/app/services/ai/CourseGenerationEngine";
+
+export interface RealBuildEngineProps {
+  idea: string;
+  onComplete: (result: any) => void;
+  onError: (error: string) => void;
+}
+
+export function RealBuildEngine({ idea, onComplete, onError }: RealBuildEngineProps) {
+  const [progress, setProgress] = useState<GenerationProgress>({
+    phase: "analyzing",
+    step: "Inicializando",
+    progress: 0,
+    message: "Preparando generación...",
+    isComplete: false
+  });
+  
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
+  const [startTime, setStartTime] = useState<number>(0);
+
+  // Servicio de generación real
+  const generationService = RealGenerationService.getInstance();
+
+  /**
+   * Callback para actualizar progreso
+   */
+  const handleProgressUpdate = useCallback((newProgress: GenerationProgress) => {
+    setProgress(newProgress);
+    
+    if (newProgress.phase === "complete" && newProgress.isComplete) {
+      setIsRunning(false);
+      
+      // Obtener resultado del job
+      if (jobId) {
+        const job = generationService.getJobStatus(jobId);
+        if (job && job.result) {
+          const legacyFormat = generationService.convertToLegacyFormat(job.result);
+          onComplete(legacyFormat);
+        }
+      }
+    } else if (newProgress.phase === "error") {
+      setIsRunning(false);
+      onError(newProgress.error || "Error desconocido en la generación");
+    }
+  }, [jobId, onComplete, onError]);
+
+  /**
+   * Inicia la generación real
+   */
+  const startGeneration = useCallback(async () => {
+    if (isRunning) return;
+    
+    setIsRunning(true);
+    setStartTime(Date.now());
+    
+    try {
+      const newJobId = await generationService.startCourseGeneration(idea, handleProgressUpdate);
+      setJobId(newJobId);
+    } catch (error: any) {
+      console.error("Error starting generation:", error);
+      setIsRunning(false);
+      onError(`Error al iniciar generación: ${error.message}`);
+    }
+  }, [idea, isRunning, handleProgressUpdate, onError]);
+
+  /**
+   * Inicia generación al montar el componente
+   */
+  useEffect(() => {
+    startGeneration();
+  }, []); // Solo ejecutar una vez al montar
+
+  /**
+   * Formatea tiempo transcurrido
+   */
+  const formatElapsedTime = (startTime: number): string => {
+    if (!startTime) return "0s";
+    
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    if (elapsed < 60) return `${elapsed}s`;
+    if (elapsed < 3600) return `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`;
+    return `${Math.floor(elapsed / 3600)}h ${Math.floor((elapsed % 3600) / 60)}m`;
+  };
+
+  /**
+   * Obtiene icono para cada fase
+   */
+  const getPhaseIcon = (phase: string): string => {
+    switch (phase) {
+      case "analyzing": return "🧠";
+      case "architecting": return "🏗️";
+      case "generating": return "✍️";
+      case "validating": return "🔍";
+      case "finalizing": return "✨";
+      case "complete": return "🎉";
+      case "error": return "❌";
+      default: return "⚡";
+    }
+  };
+
+  /**
+   * Obtiene color para cada fase
+   */
+  const getPhaseColor = (phase: string): string => {
+    switch (phase) {
+      case "complete": return "#22c55e";
+      case "error": return "#ef4444";
+      default: return "#a855f7";
+    }
+  };
+
+  return (
+    <div style={{
+      padding: "30px",
+      borderRadius: "20px",
+      background: "rgba(15,15,18,0.9)",
+      border: "1px solid rgba(255,255,255,0.1)",
+      maxWidth: "800px",
+      margin: "0 auto"
+    }}>
+      
+      {/* HEADER */}
+      <div style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: "25px"
+      }}>
+        <div>
+          <div style={{ 
+            color: "#a855f7", 
+            fontSize: "13px", 
+            fontWeight: "bold",
+            marginBottom: "8px"
+          }}>
+            {getPhaseIcon(progress.phase)} CROW BUILD ENGINE
+          </div>
+          
+          <h2 style={{ 
+            margin: "0 0 8px", 
+            fontSize: "22px",
+            color: "#fff" 
+          }}>
+            {progress.phase === "complete" ? "¡Curso Completado!" : "Generando tu curso"}
+          </h2>
+          
+          <p style={{ 
+            color: "#888", 
+            margin: 0,
+            fontSize: "14px"
+          }}>
+            {progress.message}
+          </p>
+        </div>
+
+        <div style={{
+          textAlign: "right",
+          padding: "15px 20px",
+          borderRadius: "12px",
+          background: "rgba(124,58,237,0.1)",
+          border: "1px solid rgba(124,58,237,0.2)"
+        }}>
+          <div style={{ 
+            color: "#666", 
+            fontSize: "11px", 
+            marginBottom: "6px" 
+          }}>
+            PROGRESO
+          </div>
+          
+          <div style={{
+            fontSize: "28px",
+            fontWeight: "bold",
+            color: getPhaseColor(progress.phase)
+          }}>
+            {Math.round(progress.progress)}%
+          </div>
+          
+          {startTime > 0 && (
+            <div style={{ 
+              color: "#666", 
+              fontSize: "11px",
+              marginTop: "4px"
+            }}>
+              {formatElapsedTime(startTime)}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* PROGRESS BAR */}
+      <div style={{
+        marginBottom: "30px"
+      }}>
+        <div style={{
+          height: "8px",
+          borderRadius: "12px",
+          background: "rgba(255,255,255,0.1)",
+          overflow: "hidden"
+        }}>
+          <div style={{
+            height: "100%",
+            width: `${progress.progress}%`,
+            background: progress.phase === "error" 
+              ? "linear-gradient(90deg, #ef4444, #dc2626)"
+              : progress.phase === "complete"
+              ? "linear-gradient(90deg, #22c55e, #16a34a)" 
+              : "linear-gradient(90deg, #7c3aed, #9333ea)",
+            borderRadius: "12px",
+            transition: "width 0.5s ease-out"
+          }} />
+        </div>
+      </div>
+
+      {/* CURRENT STEP */}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "15px",
+        padding: "20px",
+        borderRadius: "12px",
+        background: progress.phase === "error" 
+          ? "rgba(239, 68, 68, 0.1)"
+          : "rgba(124,58,237,0.08)",
+        border: progress.phase === "error"
+          ? "1px solid rgba(239, 68, 68, 0.2)"
+          : "1px solid rgba(124,58,237,0.15)"
+      }}>
+        <div style={{
+          fontSize: "24px"
+        }}>
+          {getPhaseIcon(progress.phase)}
+        </div>
+        
+        <div style={{ flex: 1 }}>
+          <div style={{ 
+            fontWeight: "bold", 
+            marginBottom: "4px",
+            color: "#fff"
+          }}>
+            {progress.step}
+          </div>
+          
+          <div style={{ 
+            color: "#aaa",
+            fontSize: "14px"
+          }}>
+            {progress.message}
+          </div>
+          
+          {progress.estimatedTimeRemaining && progress.phase !== "complete" && progress.phase !== "error" && (
+            <div style={{
+              color: "#666",
+              fontSize: "12px",
+              marginTop: "6px"
+            }}>
+              Tiempo estimado restante: {progress.estimatedTimeRemaining}
+            </div>
+          )}
+        </div>
+        
+        {isRunning && progress.phase !== "complete" && progress.phase !== "error" && (
+          <div style={{
+            width: "20px",
+            height: "20px",
+            border: "2px solid rgba(124,58,237,0.3)",
+            borderTop: "2px solid #a855f7",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite"
+          }} />
+        )}
+      </div>
+
+      {/* PHASE BREAKDOWN */}
+      <div style={{
+        marginTop: "25px",
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+        gap: "12px"
+      }}>
+        {[
+          { phase: "analyzing", label: "Análisis", icon: "🧠" },
+          { phase: "architecting", label: "Estructura", icon: "🏗️" },
+          { phase: "generating", label: "Contenido", icon: "✍️" },
+          { phase: "validating", label: "Validación", icon: "🔍" },
+          { phase: "finalizing", label: "Finalización", icon: "✨" }
+        ].map((item) => {
+          const isCurrent = progress.phase === item.phase;
+          const isCompleted = getPhaseOrder(progress.phase) > getPhaseOrder(item.phase);
+          const isError = progress.phase === "error";
+          
+          return (
+            <div key={item.phase} style={{
+              padding: "12px",
+              borderRadius: "8px",
+              background: isCurrent 
+                ? "rgba(124,58,237,0.15)" 
+                : isCompleted 
+                ? "rgba(34, 197, 94, 0.1)"
+                : "rgba(255,255,255,0.05)",
+              border: isCurrent 
+                ? "1px solid rgba(124,58,237,0.3)"
+                : isCompleted
+                ? "1px solid rgba(34, 197, 94, 0.2)"
+                : "1px solid rgba(255,255,255,0.1)",
+              textAlign: "center" as const
+            }}>
+              <div style={{ 
+                fontSize: "16px", 
+                marginBottom: "6px" 
+              }}>
+                {isCompleted ? "✅" : isCurrent ? item.icon : "⏳"}
+              </div>
+              
+              <div style={{ 
+                fontSize: "11px",
+                color: isCurrent 
+                  ? "#a855f7" 
+                  : isCompleted 
+                  ? "#22c55e"
+                  : "#666",
+                fontWeight: isCurrent ? "bold" : "normal"
+              }}>
+                {item.label}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ERROR MESSAGE */}
+      {progress.phase === "error" && progress.error && (
+        <div style={{
+          marginTop: "20px",
+          padding: "15px",
+          borderRadius: "8px",
+          background: "rgba(239, 68, 68, 0.1)",
+          border: "1px solid rgba(239, 68, 68, 0.2)",
+          color: "#ef4444"
+        }}>
+          <strong>Error:</strong> {progress.error}
+        </div>
+      )}
+      
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/**
+ * Obtiene orden numérico de fases para comparación
+ */
+function getPhaseOrder(phase: string): number {
+  const phases = ["analyzing", "architecting", "generating", "validating", "finalizing", "complete"];
+  return phases.indexOf(phase);
+}
+
+/**
+ * Hook para usar el Real Build Engine
+ */
+export function useRealBuildEngine() {
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const startGeneration = useCallback((idea: string) => {
+    setIsGenerating(true);
+    setResult(null);
+    setError(null);
+  }, []);
+
+  const handleComplete = useCallback((generatedResult: any) => {
+    setResult(generatedResult);
+    setIsGenerating(false);
+  }, []);
+
+  const handleError = useCallback((errorMessage: string) => {
+    setError(errorMessage);
+    setIsGenerating(false);
+  }, []);
+
+  return {
+    isGenerating,
+    result,
+    error,
+    startGeneration,
+    handleComplete,
+    handleError
+  };
+}

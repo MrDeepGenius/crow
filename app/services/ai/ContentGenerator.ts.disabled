@@ -1,0 +1,518 @@
+// ============================================
+// CONTENT GENERATOR - Real AI Content Generation
+// ============================================
+
+import { AIProvider, AIProviderFactory } from "./AIProvider";
+import { CourseBlueprint, CourseLesson, CourseModule } from "./CourseArchitect";
+import { ProductSpecification } from "./IdeaAnalyzer";
+
+export interface GeneratedLesson {
+  id: string;
+  title: string;
+  objective: string;
+  introduction: string;
+  
+  sections: ContentSection[];
+  examples: string[];
+  practicalCase?: string;
+  keyPoints: string[];
+  
+  activity?: GeneratedActivity;
+  quiz?: GeneratedQuiz;
+  summary: string;
+  resources: GeneratedResource[];
+  video: VideoSpec;
+  
+  estimatedDuration: string;
+  wordCount: number;
+  
+  metadata: {
+    generatedAt: string;
+    context: LessonContext;
+  };
+}
+
+export interface ContentSection {
+  type: "heading" | "paragraph" | "list" | "highlight" | "example" | "definition";
+  title?: string;
+  content: string;
+  order: number;
+}
+
+export interface GeneratedActivity {
+  type: "multiple-choice" | "true-false" | "ordering" | "matching" | "fill-blanks" | "reflection" | "practical" | "case-study";
+  title: string;
+  instructions: string;
+  content: any; // Específico según el tipo
+  feedback: string;
+  points?: number;
+  timeEstimate?: string;
+}
+
+export interface GeneratedQuiz {
+  id: string;
+  title: string;
+  instructions: string;
+  questions: QuizQuestion[];
+  passingScore: number;
+  maxAttempts: number;
+  timeLimit?: number;
+}
+
+export interface QuizQuestion {
+  id: string;
+  type: "multiple-choice" | "true-false" | "short-answer";
+  question: string;
+  options?: string[];
+  correctAnswer: string | number;
+  explanation: string;
+  points: number;
+  difficulty: 1 | 2 | 3;
+}
+
+export interface GeneratedResource {
+  id: string;
+  title: string;
+  description: string;
+  type: "pdf" | "checklist" | "template" | "link" | "worksheet";
+  content?: string; // Contenido generado si es posible
+  status: "pending" | "generated" | "available";
+  estimatedPages?: number;
+}
+
+export interface VideoSpec {
+  enabled: boolean;
+  title: string;
+  description: string;
+  script: string;
+  scenes: VideoScene[];
+  duration: string;
+  status: "pending" | "generated" | "uploaded";
+  thumbnail?: string;
+  url?: string;
+}
+
+export interface VideoScene {
+  order: number;
+  description: string;
+  narration: string;
+  visuals: string;
+  duration: string;
+}
+
+export interface LessonContext {
+  courseTitle: string;
+  courseObjectives: string[];
+  moduleTitle: string;
+  moduleObjectives: string[];
+  lessonBlueprint: CourseLesson;
+  previousLessons: string[];
+  nextLessons: string[];
+  specification: ProductSpecification;
+  courseLevel: string;
+  targetAudience: string;
+  totalLessonsInModule: number;
+  totalModulesInCourse: number;
+}
+
+export class ContentGenerator {
+  private aiProvider: AIProvider;
+  private contextMemory: Map<string, any> = new Map();
+
+  constructor(aiProvider?: AIProvider) {
+    this.aiProvider = aiProvider || AIProviderFactory.getInstance();
+  }
+
+  /**
+   * Genera contenido completo para una lección
+   */
+  async generateLesson(
+    blueprint: CourseBlueprint,
+    moduleIndex: number,
+    lessonIndex: number,
+    context: LessonContext
+  ): Promise<GeneratedLesson> {
+    console.log(`✍️ Generando lección: ${context.lessonBlueprint.title}`);
+
+    // Crear prompt del sistema
+    const systemPrompt = this.createLessonSystemPrompt(context);
+    
+    // Crear prompt del usuario
+    const userPrompt = this.createLessonUserPrompt(context);
+
+    try {
+      // Generar contenido principal
+      const contentResponse = await this.aiProvider.generateJSON({
+        systemPrompt,
+        userPrompt,
+        temperature: 0.6,
+        maxTokens: 3000,
+      });
+
+      // Procesar y estructurar el contenido
+      const lesson = await this.processLessonContent(contentResponse, context);
+      
+      // Guardar en memoria contextual
+      this.updateContextMemory(context, lesson);
+      
+      console.log(`✓ Lección generada: ${lesson.wordCount} palabras`);
+      return lesson;
+
+    } catch (error) {
+      console.error(`Error generando lección ${context.lessonBlueprint.title}:`, error);
+      return this.createFallbackLesson(context);
+    }
+  }
+
+  /**
+   * Crea prompt del sistema para generación de lecciones
+   */
+  private createLessonSystemPrompt(context: LessonContext): string {
+    return `Eres un experto instructor y creador de contenido educativo. Tu trabajo es crear lecciones completas, educativas y engaging.
+
+CONTEXTO DEL CURSO:
+- Título: ${context.courseTitle}
+- Audiencia: ${context.targetAudience}
+- Nivel: ${context.courseLevel}
+- Tema: ${context.specification.topic}
+- Objetivo: ${context.specification.goal}
+
+CONTEXTO DEL MÓDULO:
+- Módulo: ${context.moduleTitle}
+- Objetivos: ${context.moduleObjectives.join(", ")}
+
+CONTEXTO DE LA LECCIÓN:
+- Lección: ${context.lessonBlueprint.title}
+- Método: ${context.lessonBlueprint.learningMethod}
+- Objetivos: ${context.lessonBlueprint.objectives.join(", ")}
+- Dificultad: ${context.lessonBlueprint.difficulty}/5
+
+LECCIONES ANTERIORES (para evitar repeticiones):
+${context.previousLessons.join(", ")}
+
+LECCIONES SIGUIENTES (para preparar):
+${context.nextLessons.join(", ")}
+
+REGLAS CRÍTICAS:
+1. FIDELIDAD ABSOLUTA al tema "${context.specification.topic}"
+2. Contenido REAL y educativo, NO relleno genérico
+3. Nivel apropiado para "${context.targetAudience}"
+4. Progresión lógica desde lecciones anteriores
+5. Preparación para lecciones siguientes
+6. NO repetir conceptos ya explicados anteriormente
+7. Incluir ejemplos específicos y relevantes
+8. Contenido suficientemente detallado para aprendizaje real
+
+ESTRUCTURA REQUERIDA:
+- Introducción que conecte con el objetivo
+- Secciones de contenido bien organizadas
+- Ejemplos prácticos y específicos
+- Puntos clave destacados
+- Resumen claro
+- Actividad relevante al contenido
+- Quiz basado en lo enseñado
+- Video script si corresponde
+
+Responde SOLO con JSON válido.`;
+  }
+
+  /**
+   * Crea prompt del usuario para generación específica
+   */
+  private createLessonUserPrompt(context: LessonContext): string {
+    const contentTypes = context.lessonBlueprint.contentType;
+    
+    return `Crea una lección completa sobre "${context.lessonBlueprint.title}" para el curso "${context.courseTitle}".
+
+ESPECIFICACIONES:
+- Duración objetivo: ${context.lessonBlueprint.estimatedDuration}
+- Método de aprendizaje: ${context.lessonBlueprint.learningMethod}
+- Incluir video: ${contentTypes.hasVideo}
+- Incluir actividad: ${contentTypes.hasActivity}
+- Incluir quiz: ${contentTypes.hasQuiz}
+- Incluir recursos: ${contentTypes.hasResources}
+
+OBJETIVOS DE APRENDIZAJE:
+${context.lessonBlueprint.objectives.map(obj => `- ${obj}`).join("\n")}
+
+ESTRUCTURA JSON REQUERIDA:
+{
+  "title": "${context.lessonBlueprint.title}",
+  "objective": "Objetivo principal de la lección",
+  "introduction": "Introducción engaging que conecte con objetivos",
+  
+  "sections": [
+    {
+      "type": "heading",
+      "title": "Título de sección",
+      "content": "Contenido específico",
+      "order": 1
+    },
+    {
+      "type": "paragraph",
+      "content": "Explicación detallada del concepto...",
+      "order": 2
+    },
+    {
+      "type": "list",
+      "title": "Puntos importantes",
+      "content": "• Punto 1\\n• Punto 2\\n• Punto 3",
+      "order": 3
+    },
+    {
+      "type": "example",
+      "title": "Ejemplo práctico",
+      "content": "Ejemplo específico relacionado con ${context.specification.topic}",
+      "order": 4
+    }
+  ],
+  
+  "examples": ["Ejemplo específico 1", "Ejemplo específico 2"],
+  "practicalCase": "Caso práctico detallado si corresponde",
+  "keyPoints": ["Punto clave 1", "Punto clave 2", "Punto clave 3"],
+  
+  "activity": {
+    "type": "multiple-choice|true-false|reflection|practical",
+    "title": "Título de actividad",
+    "instructions": "Instrucciones claras",
+    "content": "Contenido específico de la actividad",
+    "feedback": "Feedback educativo"
+  },
+  
+  "quiz": {
+    "title": "Quiz: ${context.lessonBlueprint.title}",
+    "instructions": "Instrucciones del quiz",
+    "questions": [
+      {
+        "type": "multiple-choice",
+        "question": "Pregunta específica sobre el contenido enseñado",
+        "options": ["Opción A", "Opción B", "Opción C", "Opción D"],
+        "correctAnswer": 0,
+        "explanation": "Explicación educativa de por qué es correcta",
+        "points": 1,
+        "difficulty": 1-3
+      }
+    ],
+    "passingScore": 70,
+    "maxAttempts": 3
+  },
+  
+  "summary": "Resumen de lo aprendido en esta lección",
+  
+  ${contentTypes.hasVideo ? `"video": {
+    "title": "Título del video",
+    "description": "Descripción del video",
+    "script": "Script completo de narración del video",
+    "scenes": [
+      {
+        "order": 1,
+        "description": "Descripción de la escena",
+        "narration": "Texto de narración",
+        "visuals": "Descripción de elementos visuales",
+        "duration": "30 segundos"
+      }
+    ],
+    "duration": "Duración total estimada"
+  },` : ""}
+  
+  ${contentTypes.hasResources ? `"resources": [
+    {
+      "title": "Título del recurso",
+      "description": "Descripción del recurso",
+      "type": "pdf|checklist|template|worksheet",
+      "content": "Contenido del recurso si es generado",
+      "estimatedPages": 2
+    }
+  ]` : `"resources": []`}
+}
+
+IMPORTANTE: 
+- El contenido debe ser específico sobre "${context.specification.topic}"
+- NO usar texto genérico o de relleno
+- Explicar conceptos reales
+- Proporcionar valor educativo genuino
+- Las preguntas del quiz deben basarse en el contenido enseñado
+- Los ejemplos deben ser específicos y relevantes`;
+  }
+
+  /**
+   * Procesa el contenido generado por la IA
+   */
+  private async processLessonContent(contentResponse: any, context: LessonContext): Promise<GeneratedLesson> {
+    // Contar palabras del contenido
+    let wordCount = 0;
+    if (contentResponse.sections) {
+      wordCount = contentResponse.sections
+        .map((section: any) => section.content.split(" ").length)
+        .reduce((a: number, b: number) => a + b, 0);
+    }
+
+    // Generar IDs únicos
+    const lessonId = context.lessonBlueprint.id;
+    
+    // Procesar actividad
+    const activity = contentResponse.activity ? {
+      ...contentResponse.activity,
+      id: `activity-${lessonId}`,
+    } : undefined;
+
+    // Procesar quiz
+    const quiz = contentResponse.quiz ? {
+      ...contentResponse.quiz,
+      id: `quiz-${lessonId}`,
+      questions: contentResponse.quiz.questions?.map((q: any, index: number) => ({
+        ...q,
+        id: `question-${lessonId}-${index + 1}`,
+      })) || []
+    } : undefined;
+
+    // Procesar recursos
+    const resources = (contentResponse.resources || []).map((resource: any, index: number) => ({
+      ...resource,
+      id: `resource-${lessonId}-${index + 1}`,
+      status: "generated" as const,
+    }));
+
+    // Procesar video
+    const video: VideoSpec = contentResponse.video ? {
+      enabled: true,
+      ...contentResponse.video,
+      status: "pending" as const,
+    } : {
+      enabled: false,
+      title: "",
+      description: "",
+      script: "",
+      scenes: [],
+      duration: "0",
+      status: "pending" as const,
+    };
+
+    return {
+      id: lessonId,
+      title: contentResponse.title,
+      objective: contentResponse.objective,
+      introduction: contentResponse.introduction,
+      sections: contentResponse.sections || [],
+      examples: contentResponse.examples || [],
+      practicalCase: contentResponse.practicalCase,
+      keyPoints: contentResponse.keyPoints || [],
+      activity,
+      quiz,
+      summary: contentResponse.summary,
+      resources,
+      video,
+      estimatedDuration: context.lessonBlueprint.estimatedDuration,
+      wordCount,
+      metadata: {
+        generatedAt: new Date().toISOString(),
+        context
+      }
+    };
+  }
+
+  /**
+   * Actualiza la memoria contextual para mantener coherencia
+   */
+  private updateContextMemory(context: LessonContext, lesson: GeneratedLesson): void {
+    const moduleKey = `module-${context.moduleTitle}`;
+    
+    if (!this.contextMemory.has(moduleKey)) {
+      this.contextMemory.set(moduleKey, {
+        lessons: [],
+        conceptsCovered: [],
+        examplesUsed: []
+      });
+    }
+
+    const moduleMemory = this.contextMemory.get(moduleKey);
+    moduleMemory.lessons.push({
+      title: lesson.title,
+      keyPoints: lesson.keyPoints,
+      conceptsCovered: lesson.sections.filter(s => s.type === "heading").map(s => s.title)
+    });
+
+    // Extraer conceptos cubiertos
+    lesson.keyPoints.forEach(point => {
+      if (!moduleMemory.conceptsCovered.includes(point)) {
+        moduleMemory.conceptsCovered.push(point);
+      }
+    });
+
+    this.contextMemory.set(moduleKey, moduleMemory);
+  }
+
+  /**
+   * Crea lección fallback si la IA falla
+   */
+  private createFallbackLesson(context: LessonContext): GeneratedLesson {
+    console.log(`Creando lección fallback para: ${context.lessonBlueprint.title}`);
+
+    return {
+      id: context.lessonBlueprint.id,
+      title: context.lessonBlueprint.title,
+      objective: context.lessonBlueprint.objectives[0] || `Aprender sobre ${context.lessonBlueprint.title}`,
+      introduction: `En esta lección aprenderás sobre ${context.lessonBlueprint.title} en el contexto de ${context.specification.topic}.`,
+      
+      sections: [
+        {
+          type: "heading",
+          title: context.lessonBlueprint.title,
+          content: "",
+          order: 1
+        },
+        {
+          type: "paragraph", 
+          content: `${context.lessonBlueprint.title} es un concepto importante en ${context.specification.topic}. Esta lección te ayudará a comprender sus fundamentos y aplicaciones prácticas.`,
+          order: 2
+        }
+      ],
+      
+      examples: [`Ejemplo relacionado con ${context.lessonBlueprint.title}`],
+      keyPoints: [
+        `${context.lessonBlueprint.title} es fundamental`,
+        "La práctica mejora la comprensión",
+        "Aplicación en contextos reales"
+      ],
+      
+      summary: `En esta lección aprendiste los conceptos básicos de ${context.lessonBlueprint.title}.`,
+      resources: [],
+      
+      video: {
+        enabled: false,
+        title: "",
+        description: "",
+        script: "",
+        scenes: [],
+        duration: "0",
+        status: "pending"
+      },
+      
+      estimatedDuration: context.lessonBlueprint.estimatedDuration,
+      wordCount: 150,
+      
+      metadata: {
+        generatedAt: new Date().toISOString(),
+        context
+      }
+    };
+  }
+
+  /**
+   * Obtiene memoria contextual para un módulo
+   */
+  getContextMemory(moduleTitle: string): any {
+    return this.contextMemory.get(`module-${moduleTitle}`) || {
+      lessons: [],
+      conceptsCovered: [],
+      examplesUsed: []
+    };
+  }
+
+  /**
+   * Limpia la memoria contextual
+   */
+  clearContextMemory(): void {
+    this.contextMemory.clear();
+  }
+}
