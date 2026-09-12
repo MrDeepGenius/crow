@@ -13,6 +13,6 @@ export default createMiddleware({
 });
 
 export const config = {
-  // Match only internationalized pathnames
-  matcher: ['/', '/(en|es|pt|ru|it|zh)/:path*']
+  // i18n middleware disabled: app pages live at the root, not under [locale]/
+  matcher: []
 };
