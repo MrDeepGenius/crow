@@ -6,6 +6,7 @@ import { listPublications } from "@/app/services/marketplace/marketStore";
 import { listOrders } from "@/app/services/marketplace/marketOrders";
 import { countEvents, getCreatorProfile } from "@/app/services/marketplace/marketStore";
 import { CreatorPageEditor } from "@/app/components/CreatorPageEditor";
+import { BackButton } from "@/app/components/BackButton";
 
 const FONT: string = '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
@@ -60,6 +61,9 @@ export function CreatorDashboardClient() {
           <img src="/crowlogo.png" alt="Crow" style={{ width: "36px", height: "36px", objectFit: "contain" }} />
           Creator Dashboard
         </Link>
+        <div style={{ marginLeft: "auto" }}>
+          <BackButton />
+        </div>
       </header>
       <section style={{ maxWidth: "1000px", margin: "0 auto", padding: "40px 24px 80px" }}>
         {!stats.ready ? (

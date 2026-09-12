@@ -11,6 +11,7 @@ import {
 } from "@/app/services/marketplace/marketLedger";
 import type { Category, ProductPublication } from "@/app/services/marketplace/marketTypes";
 import { ProductCard } from "../../marketplace/components/ProductCard";
+import { BackButton } from "@/app/components/BackButton";
 
 const FONT: string = '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
@@ -88,10 +89,10 @@ export function AffiliatesMarketplaceClient() {
           <img src="/crowlogo.png" alt="Crow" style={{ width: "36px", height: "36px", objectFit: "contain" }} />
           Afiliados
         </Link>
-        <nav style={{ display: "flex", gap: "16px", fontSize: "14px", marginLeft: "auto" }}>
+        <nav style={{ display: "flex", gap: "16px", fontSize: "14px", marginLeft: "auto", alignItems: "center" }}>
           <Link href="/affiliates/program" style={{ color: "#a855f7", textDecoration: "none", fontWeight: "bold" }}>Programa</Link>
-          <Link href="/affiliates/dashboard" style={{ color: "#aaa", textDecoration: "none" }}>Dashboard</Link>
           <Link href="/marketplace" style={{ color: "#aaa", textDecoration: "none" }}>Marketplace</Link>
+          <BackButton fallback="/affiliates" />
         </nav>
       </header>
       <section style={{ maxWidth: "1250px", margin: "0 auto", padding: "40px 24px 80px" }}>

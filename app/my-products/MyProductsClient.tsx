@@ -6,6 +6,7 @@ import { getPublication, logEvent } from "@/app/services/marketplace/marketStore
 import { listEntitlements } from "@/app/services/marketplace/marketLedger";
 import type { Entitlement, ProductPublication } from "@/app/services/marketplace/marketTypes";
 import { AccountMenu } from "@/app/components/AccountMenu";
+import { BackButton } from "@/app/components/BackButton";
 
 const FONT: string = '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
@@ -112,7 +113,8 @@ export function MyProductsClient() {
           <img src="/crowlogo.png" alt="Crow" style={{ width: "36px", height: "36px", objectFit: "contain" }} />
           Mis productos
         </Link>
-        <div style={{ marginLeft: "auto" }}>
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "12px" }}>
+          <BackButton />
           <AccountMenu />
         </div>
       </header>

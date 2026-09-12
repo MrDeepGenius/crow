@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { BackButton } from "@/app/components/BackButton";
 
 export const metadata: Metadata = {
   title: "Programa de afiliados · Crow Market",
@@ -16,9 +17,10 @@ export default function AffiliateProgramPage() {
           <img src="/crowlogo.png" alt="Crow" style={{ width: "36px", height: "36px", objectFit: "contain" }} />
           Crow Market
         </Link>
-        <nav style={{ display: "flex", gap: "16px", fontSize: "14px", marginLeft: "auto" }}>
+        <nav style={{ display: "flex", gap: "16px", fontSize: "14px", marginLeft: "auto", alignItems: "center" }}>
           <Link href="/affiliates" style={{ color: "#a855f7", textDecoration: "none", fontWeight: "bold" }}>Affiliate Center</Link>
           <Link href="/marketplace" style={{ color: "#aaa", textDecoration: "none" }}>Marketplace</Link>
+          <BackButton fallback="/affiliates" />
         </nav>
       </header>
 

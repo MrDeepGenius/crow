@@ -7,6 +7,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { BackButton } from "@/app/components/BackButton";
 
 const FONT: string = '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
@@ -124,6 +125,9 @@ function LicensesClient() {
         <Link href="/marketplace" style={{ color: "#fff", textDecoration: "none", fontWeight: 800, fontSize: "17px" }}>CROW</Link>
         <span style={{ color: "#666" }}>/</span>
         <span style={{ fontWeight: 700 }}>Licencias</span>
+        <div style={{ marginLeft: "auto" }}>
+          <BackButton />
+        </div>
       </header>
       <section style={{ maxWidth: "1000px", margin: "0 auto", padding: "44px 24px 80px" }}>
         <h1 style={{ fontSize: "30px", margin: "0 0 8px", letterSpacing: "-0.5px" }}>Licencias Crow</h1>

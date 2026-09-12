@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { BackButton } from "@/app/components/BackButton";
 import { AIProviderFactory } from "@/app/services/ai/AIProvider";
 import type {
   CourseBlueprint,
@@ -390,6 +391,7 @@ export default function CreatePage() {
           >
             Afiliados
           </a>
+          <BackButton />
         </div>
       </nav>
 

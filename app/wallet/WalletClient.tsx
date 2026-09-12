@@ -9,6 +9,7 @@ import {
   requestWithdrawal,
 } from "@/app/services/marketplace/marketLedger";
 import type { Wallet, WalletTransaction, Withdrawal } from "@/app/services/marketplace/marketTypes";
+import { BackButton } from "@/app/components/BackButton";
 
 const FONT: string = '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
@@ -76,6 +77,9 @@ export function WalletClient() {
           <img src="/crowlogo.png" alt="Crow" style={{ width: "36px", height: "36px", objectFit: "contain" }} />
           Wallet
         </Link>
+        <div style={{ marginLeft: "auto" }}>
+          <BackButton />
+        </div>
       </header>
       <section style={{ maxWidth: "1000px", margin: "0 auto", padding: "40px 24px 80px" }}>
         {!userId ? (
