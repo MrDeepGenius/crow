@@ -1,0 +1,68 @@
+{
+  "common": {
+    "home": "Home",
+    "about": "About",
+    "contact": "Contact",
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout",
+    "dashboard": "Dashboard",
+    "account": "Account",
+    "settings": "Settings",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "language": "Language"
+  },
+  "navigation": {
+    "marketplace": "Marketplace",
+    "affiliates": "Affiliates",
+    "creator": "Creator",
+    "products": "My Products",
+    "rewards": "Rewards",
+    "admin": "Admin"
+  },
+  "auth": {
+    "welcomeBack": "Welcome back",
+    "signInToContinue": "Sign in to continue",
+    "email": "Email",
+    "password": "Password",
+    "rememberMe": "Remember me",
+    "forgotPassword": "Forgot password?",
+    "dontHaveAccount": "Don't have an account?",
+    "createAccount": "Create account",
+    "alreadyHaveAccount": "Already have an account?"
+  },
+  "marketplace": {
+    "title": "Marketplace",
+    "description": "Discover amazing products",
+    "featured": "Featured Products",
+    "categories": "Categories",
+    "price": "Price",
+    "addToCart": "Add to Cart",
+    "buyNow": "Buy Now",
+    "outOfStock": "Out of Stock"
+  },
+  "affiliates": {
+    "title": "Affiliate Program",
+    "earnings": "Earnings",
+    "commissions": "Commissions",
+    "referrals": "Referrals",
+    "links": "Affiliate Links",
+    "stats": "Statistics"
+  },
+  "admin": {
+    "title": "Admin Panel",
+    "users": "Users",
+    "orders": "Orders",
+    "payments": "Payments",
+    "fraud": "Fraud Detection",
+    "analytics": "Analytics"
+  }
+}
