@@ -1,0 +1,68 @@
+{
+  "common": {
+    "home": "首页",
+    "about": "关于",
+    "contact": "联系",
+    "login": "登录",
+    "register": "注册",
+    "logout": "退出",
+    "dashboard": "控制台",
+    "account": "账户",
+    "settings": "设置",
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "create": "创建",
+    "search": "搜索",
+    "loading": "加载中...",
+    "error": "错误",
+    "success": "成功",
+    "language": "语言"
+  },
+  "navigation": {
+    "marketplace": "市场",
+    "affiliates": "联盟",
+    "creator": "创建者",
+    "products": "我的产品",
+    "rewards": "奖励",
+    "admin": "管理员"
+  },
+  "auth": {
+    "welcomeBack": "欢迎回来",
+    "signInToContinue": "登录以继续",
+    "email": "邮箱",
+    "password": "密码",
+    "rememberMe": "记住我",
+    "forgotPassword": "忘记密码？",
+    "dontHaveAccount": "没有账户？",
+    "createAccount": "创建账户",
+    "alreadyHaveAccount": "已有账户？"
+  },
+  "marketplace": {
+    "title": "市场",
+    "description": "发现惊人的产品",
+    "featured": "精选产品",
+    "categories": "分类",
+    "price": "价格",
+    "addToCart": "添加到购物车",
+    "buyNow": "立即购买",
+    "outOfStock": "缺货"
+  },
+  "affiliates": {
+    "title": "联盟计划",
+    "earnings": "收入",
+    "commissions": "佣金",
+    "referrals": "推荐",
+    "links": "联盟链接",
+    "stats": "统计"
+  },
+  "admin": {
+    "title": "管理面板",
+    "users": "用户",
+    "orders": "订单",
+    "payments": "支付",
+    "fraud": "欺诈检测",
+    "analytics": "分析"
+  }
+}
