@@ -37,7 +37,7 @@ export function MarketSidebar({
   return (
     <>
       <aside
-        className="mk-sidebar"
+        className={`mk-sidebar${mobileOpen ? " open" : ""}`}
         style={{
           width: 220,
           flexShrink: 0,
