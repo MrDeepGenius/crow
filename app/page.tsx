@@ -19,7 +19,7 @@ export default function Home() {
   }, []);
 
   return (
-    <main style={{ minHeight: "100vh", background: "#050505", color: "#fff", fontFamily: FONT, position: "relative", overflow: "hidden" }}>
+    <main className="lp-main" style={{ minHeight: "100vh", background: "#050505", color: "#fff", fontFamily: FONT, position: "relative", overflow: "hidden" }}>
       <AnimatedBackground />
       <div style={{ position: "relative", zIndex: 1 }}>
         <LandingNav scrolled={scrolled} />
@@ -40,6 +40,7 @@ export default function Home() {
 function LandingNav({ scrolled }: { scrolled: boolean }) {
   return (
     <nav
+      className="lp-nav"
       style={{
         position: "sticky",
         top: 0,
@@ -83,7 +84,7 @@ function LandingNav({ scrolled }: { scrolled: boolean }) {
 function HeroSection() {
   return (
     <section style={{ padding: "70px 5% 60px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ maxWidth: "1200px", width: "100%", display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: "60px", alignItems: "center" }}>
+      <div className="lp-hero-grid" style={{ maxWidth: "1200px", width: "100%", display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: "60px", alignItems: "center" }}>
         <div>
           <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 16px", borderRadius: "30px", border: "1px solid rgba(150,80,255,0.3)", background: "rgba(130,50,255,0.08)", color: "#c7a7ff", fontSize: "13px", marginBottom: "24px" }}>
             <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#4ade80", display: "inline-block" }} />
@@ -111,7 +112,7 @@ function HeroSection() {
             </a>
           </div>
 
-          <div style={{ display: "flex", gap: "28px", marginTop: "40px", flexWrap: "wrap" }}>
+          <div className="lp-hero-stats" style={{ display: "flex", gap: "28px", marginTop: "40px", flexWrap: "wrap" }}>
             {[
               { n: "30%", l: "Comisión afiliado" },
               { n: "5 niveles", l: "Ganancias residuales" },
@@ -126,7 +127,7 @@ function HeroSection() {
         </div>
 
         {/* AI Studio Mockup */}
-        <div className="lp-hero-card" style={{ borderRadius: "22px", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(15,15,18,0.9)", boxShadow: "0 0 80px rgba(124,58,237,0.15)", overflow: "hidden" }}>
+        <div className="lp-hero-card lp-hero-card-mock" style={{ borderRadius: "22px", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(15,15,18,0.9)", boxShadow: "0 0 80px rgba(124,58,237,0.15)", overflow: "hidden" }}>
           <div style={{ padding: "18px 20px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", gap: "12px" }}>
             <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "linear-gradient(135deg,#7c3aed,#a855f7)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px" }}>✦</div>
             <div>
@@ -172,7 +173,7 @@ function StatsBar() {
   ];
   return (
     <section style={{ padding: "40px 5%", borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(10,10,14,0.5)" }}>
-      <div style={{ maxWidth: "1100px", margin: "0 auto", display: "flex", justifyContent: "space-around", flexWrap: "wrap", gap: "20px" }}>
+      <div className="lp-stats-bar" style={{ maxWidth: "1100px", margin: "0 auto", display: "flex", justifyContent: "space-around", flexWrap: "wrap", gap: "20px" }}>
         {stats.map((s) => (
           <div key={s.l} style={{ textAlign: "center" }}>
             <div style={{ fontSize: "32px", fontWeight: 800, background: "linear-gradient(90deg, #b88cff, #8b5cf6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{s.n}</div>
@@ -199,7 +200,7 @@ function HowItWorks() {
         <p style={{ color: MUTED, fontSize: "17px", maxWidth: "600px", margin: "0 auto" }}>Sin código, sin equipo técnico. Crow hace el trabajo pesado por vos.</p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "24px" }}>
+      <div className="lp-steps-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "24px" }}>
         {steps.map((s, i) => (
           <div key={s.title} className="lp-step-card" style={{ padding: "36px 28px", borderRadius: "20px", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.025)", position: "relative", overflow: "hidden" }}>
             <div style={{ position: "absolute", top: "-30px", right: "-30px", width: "120px", height: "120px", borderRadius: "50%", background: `radial-gradient(circle, ${s.color}15, transparent 70%)` }} />
@@ -227,8 +228,7 @@ function AffiliateSection() {
           <p style={{ color: MUTED, fontSize: "17px", maxWidth: "620px", margin: "0 auto" }}>El programa de afiliados más generoso del mercado. Comisiones directas del 30% y residuales de 5 niveles.</p>
         </div>
 
-        {/* Commission split visual */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "40px", alignItems: "center", marginBottom: "60px" }}>
+        <div className="lp-aff-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "40px", alignItems: "center", marginBottom: "60px" }}>
           <div>
             <h3 style={{ fontSize: "22px, margin: 0 0 20px" }}>¿Cómo se reparte una venta?</h3>
             <p style={{ color: MUTED, fontSize: "15px", lineHeight: 1.7, marginBottom: "24px" }}>
@@ -286,7 +286,8 @@ function AffiliateSection() {
         {/* CP Points system */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px", marginBottom: "40px" }}>
           <div className="lp-feature-card" style={{ padding: "28px", borderRadius: "18px", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.025)" }}>
-            <div style={{ fontSize: "28px", marginBottom: "12px" }}>🪙</div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="https://media.base44.com/images/public/6aa56753cff6749ab35eeb88/bacb9c769_a75262e7-87d2-495b-a835-f5241943cca9.jpg" alt="Crow Points" style={{ width: "56px", height: "56px", borderRadius: "50%", objectFit: "cover", marginBottom: "12px" }} />
             <h4 style={{ fontSize: "17px", margin: "0 0 8px" }}>Crow Points (CP)</h4>
             <p style={{ color: MUTED, fontSize: "14px", lineHeight: 1.6, margin: 0 }}>Acumulás 1 CP por cada USDT válido en ventas. Los CP desbloquean recompensas, suben tu nivel y aumentan tu participación en el Rewards Pool.</p>
           </div>
@@ -337,7 +338,7 @@ function AffiliateSection() {
 function CreatorSection() {
   return (
     <section id="creadores" style={{ padding: "90px 5%", maxWidth: "1200px", margin: "0 auto" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "60px", alignItems: "center" }}>
+      <div className="lp-creator-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "60px", alignItems: "center" }}>
         <div>
           <div style={{ color: VIOLET_BRIGHT, fontSize: "13px", fontWeight: "bold", letterSpacing: "2px", marginBottom: "12px" }}>PARA CREADORES</div>
           <h2 style={{ fontSize: "clamp(30px, 4vw, 42px), margin: 0 0 16px", fontWeight: 800, letterSpacing: "-1px" }}>Tu estudio de creación con IA</h2>
@@ -406,7 +407,7 @@ function CTASection() {
         <p style={{ color: MUTED, fontSize: "18px", lineHeight: 1.6, marginBottom: "36px" }}>
           Únete a miles de creadores y afiliados que ya están generando ingresos con Crow Market. Registrarse es gratis.
         </p>
-        <div style={{ display: "flex", gap: "16px", justifyContent: "center", flexWrap: "wrap" }}>
+        <div className="lp-cta-btns" style={{ display: "flex", gap: "16px", justifyContent: "center", flexWrap: "wrap" }}>
           <Link href="/register" className="lp-btn-primary" style={{ background: `linear-gradient(135deg, ${VIOLET}, ${VIOLET_BRIGHT})`, color: "#fff", textDecoration: "none", borderRadius: "14px", padding: "18px 40px", fontSize: "17px", fontWeight: "bold", boxShadow: "0 0 40px rgba(124,58,237,0.35)", display: "inline-block" }}>
             Registrarse gratis →
           </Link>
@@ -426,7 +427,7 @@ function CTASection() {
 function LandingFooter() {
   return (
     <footer style={{ borderTop: "1px solid rgba(255,255,255,0.08)", padding: "40px 5%", background: "rgba(5,5,5,0.8)" }}>
-      <div style={{ maxWidth: "1200px", margin: "0 auto", display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: "40px" }}>
+      <div className="lp-footer-grid" style={{ maxWidth: "1200px", margin: "0 auto", display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: "40px" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -474,7 +475,28 @@ const LANDING_CSS = `
 .lp-hero-card { animation: lpFloat 6s ease-in-out infinite; }
 @keyframes lpFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 @media (prefers-reduced-motion: reduce) { .lp-hero-card, .lp-step-card, .lp-feature-card, .lp-tier-card, .lp-aff-card, .lp-creator-card { animation: none !important; transition: none !important; } }
+
+/* ====== RESPONSIVE ====== */
 @media (max-width: 900px) {
   .lp-nav-links { display: none !important; }
+  .lp-hero-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
+  .lp-hero-card { display: none !important; }
+  .lp-stats-bar { gap: 16px !important; }
+  .lp-stats-bar > div { flex: 1 1 40% !important; }
+  .lp-steps-grid { grid-template-columns: 1fr !important; }
+  .lp-aff-grid { grid-template-columns: 1fr !important; gap: 28px !important; }
+  .lp-creator-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
+  .lp-footer-grid { grid-template-columns: 1fr 1fr !important; gap: 24px !important; }
+}
+@media (max-width: 600px) {
+  .lp-main { overflow-x: hidden !important; }
+  .lp-nav { padding: 0 16px !important; height: 60px !important; }
+  .lp-nav .lp-btn-ghost { display: none !important; }
+  .lp-hero-stats { gap: 16px !important; }
+  .lp-hero-stats > div { flex: 1 1 30% !important; }
+  .lp-stats-bar > div { flex: 1 1 45% !important; }
+  .lp-footer-grid { grid-template-columns: 1fr !important; }
+  .lp-cta-btns { flex-direction: column !important; align-items: stretch !important; }
+  .lp-cta-btns > a { text-align: center !important; }
 }
 `;

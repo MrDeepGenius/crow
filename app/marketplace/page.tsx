@@ -129,15 +129,15 @@ export default function MarketplacePage() {
         mobileOpen={mobileOpen}
         onMenuToggle={() => setMobileOpen((m) => !m)}
       />
-      <div style={{ flex: 1, minWidth: 0, position: "relative", zIndex: 1 }}>
+      <div className="mk-content" style={{ flex: 1, minWidth: 0, position: "relative", zIndex: 1 }}>
       <MarketplaceHero
         onSearch={(q) => goExplore(`?q=${encodeURIComponent(q)}`)}
         onChip={(format) => goExplore(format ? `?format=${format}` : "")}
       />
 
-      <div style={{ maxWidth: "1250px", margin: "0 auto", padding: "12px 24px 90px" }}>
+      <div style={{ maxWidth: "1250px", margin: "0 auto", padding: "12px 24px 90px" }} className="mk-content-inner">
         {(stats.sales > 0 || stats.buyers > 0) && (
-          <div style={{ display: "flex", gap: "32px", justifyContent: "center", marginBottom: "44px", flexWrap: "wrap" }}>
+          <div className="mk-stats-row" style={{ display: "flex", gap: "32px", justifyContent: "center", marginBottom: "44px", flexWrap: "wrap" }}>
             {stats.sales > 0 && <MarketStat value={formatCompact(stats.sales)} label="Ventas" />}
             {stats.buyers > 0 && <MarketStat value={formatCompact(stats.buyers)} label="Compradores" />}
             {stats.rating > 0 && <MarketStat value={stats.rating.toFixed(2)} label="Rating" />}
@@ -180,7 +180,7 @@ export default function MarketplacePage() {
 
             <div id="categorias" style={{ marginTop: "56px" }}>
               <SectionHeader title="¿Qué querés conseguir?" subtitle="Elegí tu objetivo y filtramos por vos." />
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "14px" }}>
+              <div className="mk-objectives-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "14px" }}>
                 {OBJECTIVES.map((o) => (
                   <button
                     key={o.label}
@@ -243,7 +243,7 @@ export default function MarketplacePage() {
             {collections.length > 0 && (
               <div id="colecciones" style={{ marginTop: "56px" }}>
                 <SectionHeader title="Colecciones Crow" subtitle="Selecciones editoriales por tema y stack." />
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
+                <div className="mk-collections-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
                   {collections.map((c) => (
                     <button
                       key={c.id}
@@ -263,7 +263,7 @@ export default function MarketplacePage() {
             {creators.length > 0 && (
               <div id="creadores" style={{ marginTop: "56px" }}>
                 <SectionHeader title="Creadores destacados" subtitle="Quienes publican y venden en Crow." />
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "14px" }}>
+                <div className="mk-creators-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "14px" }}>
                   {creators.map((c) => (
                     <Link
                       key={c.creatorId}

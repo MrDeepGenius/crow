@@ -368,6 +368,7 @@ export default function CreatePage() {
         </a>
 
         <div
+          className="mk-hide-mobile"
           style={{
             display: "flex",
             gap: "28px",
@@ -938,6 +939,7 @@ export default function CreatePage() {
       >
         © 2026 Crow Market — Create. Sell. Grow.
       </footer>
+      <style>{`@media (max-width: 760px) { .mk-hide-mobile { display: none !important; } }`}</style>
     </main>
   );
 }

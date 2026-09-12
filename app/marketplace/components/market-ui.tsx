@@ -73,6 +73,27 @@ export const MARKET_CSS = `
 @media (max-width: 760px) {
   .mk-hide-mobile { display: none !important; }
 }
+@media (max-width: 900px) {
+  .mk-content { width: 100% !important; }
+  .mk-hero-search { flex-direction: column !important; gap: 8px !important; }
+  .mk-hero-search input { width: 100% !important; }
+  .mk-hero-search button { width: 100% !important; }
+  .mk-header { padding: 0 16px !important; gap: 12px !important; }
+  .mk-create-btn { padding: 8px 14px !important; font-size: 12px !important; }
+}
+@media (max-width: 600px) {
+  .mk-content > div { padding: 12px 16px 60px !important; }
+  .mk-product-grid { grid-template-columns: 1fr 1fr !important; gap: 12px !important; }
+  .mk-objectives-grid { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+  .mk-collections-grid { grid-template-columns: 1fr !important; }
+  .mk-creators-grid { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+  .mk-stats-row { gap: 16px !important; }
+}
+@media (max-width: 400px) {
+  .mk-product-grid { grid-template-columns: 1fr !important; }
+  .mk-objectives-grid { grid-template-columns: 1fr !important; }
+  .mk-creators-grid { grid-template-columns: 1fr !important; }
+}
 `;
 
 // ---------- Header ----------
@@ -88,6 +109,7 @@ export function MarketplaceHeader({ onSearch }: { onSearch?: (q: string) => void
   }, []);
   return (
     <header
+      className="mk-header"
       style={{
         position: "sticky",
         top: 0,
@@ -138,7 +160,7 @@ export function MarketplaceHeader({ onSearch }: { onSearch?: (q: string) => void
         <Link href="/my-products" className="mk-btn mk-hide-mobile" style={{ color: MK.muted, textDecoration: "none", fontSize: "14px" }}>
           Mis productos
         </Link>
-        <Link href="/create" className="mk-btn" style={{ padding: "10px 18px", borderRadius: "10px", background: MK.violet, color: "#fff", fontWeight: "bold", textDecoration: "none", fontSize: "13px", whiteSpace: "nowrap" }}>
+        <Link href="/create" className="mk-btn mk-create-btn" style={{ padding: "10px 18px", borderRadius: "10px", background: MK.violet, color: "#fff", fontWeight: "bold", textDecoration: "none", fontSize: "13px", whiteSpace: "nowrap" }}>
           Crear
         </Link>
         <AccountMenu />
@@ -183,6 +205,7 @@ export function MarketplaceHero({
             e.preventDefault();
             onSearch(q);
           }}
+          className="mk-hero-search"
           style={{ display: "flex", gap: "10px", maxWidth: "560px", margin: "0 auto 20px", padding: "8px", borderRadius: "16px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
         >
           <label htmlFor="mk-hero-search" style={{ position: "absolute", left: "-9999px" }}>¿Qué estás buscando?</label>
@@ -270,7 +293,7 @@ export function FavoriteButton({ productId, size }: { productId: string; size?: 
 
 export function ProductGrid({ children }: { children: ReactNode }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "18px" }}>
+    <div className="mk-product-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "18px" }}>
       {children}
     </div>
   );
@@ -278,7 +301,7 @@ export function ProductGrid({ children }: { children: ReactNode }) {
 
 export function SkeletonCards({ count }: { count?: number }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "18px" }}>
+    <div className="mk-product-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "18px" }}>
       {Array.from({ length: count ?? 8 }, (_, i) => (
         <div key={i}>
           <div className="mk-skeleton" style={{ height: "170px", marginBottom: "12px" }} />
