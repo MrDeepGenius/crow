@@ -59,6 +59,10 @@ export async function POST(req: Request): Promise<NextResponse> {
     }
     const res = NextResponse.json({ ok: true, user: login.user, referrerWarning });
     res.headers.set("Set-Cookie", sessionCookieHeader(login.token));
+    // Redirect to onboarding with affiliate flag if referral was used
+    if (referralCode) {
+      res.headers.set("Location", "/onboarding?add=affiliate");
+    }
     return res;
   } catch {
     return NextResponse.json({ ok: false, reason: "SERVER_ERROR" }, { status: 500 });
