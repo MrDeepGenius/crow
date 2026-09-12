@@ -1,0 +1,27 @@
+{
+  "network": "BSC",
+  "tokenContract": "0x55d398326f99059ff775485246999027b3197955",
+  "recipient": "0x5c77b34c16bae2ccb21695564c2fe68ec99f771f",
+  "lastProcessedBlock": 112,
+  "updatedAt": "2026-09-12T17:02:50.967Z",
+  "paused": false,
+  "stats": {
+    "status": "RUNNING",
+    "lastProcessedBlock": 112,
+    "currentBlock": 112,
+    "lastScanAt": "2026-09-12T17:02:50.967Z",
+    "lastError": null,
+    "transfersDetected": 1,
+    "matched": 1,
+    "confirmed": 1,
+    "unmatched": 0,
+    "errors": 0,
+    "lastTxHash": "0x1111111111111111111111111111111111111111111111111111111111111111",
+    "lastPaymentAt": "2026-09-12T17:02:50.967Z"
+  },
+  "sightings": {},
+  "unmatched": [],
+  "blockTimes": {
+    "100": 1789232570000
+  }
+}

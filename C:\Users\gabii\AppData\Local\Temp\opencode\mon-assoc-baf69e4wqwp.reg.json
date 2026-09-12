@@ -1,0 +1,11 @@
+{
+  "usedTx": {},
+  "usedQuotes": {},
+  "events": [
+    {
+      "timestamp": "2026-09-12T17:02:51.018Z",
+      "kind": "monitor_unmatched",
+      "detail": "tx=0x1111111111111111111111111111111111111111111111111111111111111111 amount=50"
+    }
+  ]
+}

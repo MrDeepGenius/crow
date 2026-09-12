@@ -1,0 +1,21 @@
+{
+  "usedTx": {
+    "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb": {
+      "orderId": "ord-9",
+      "usedAt": "2026-09-12T17:05:46.680Z"
+    }
+  },
+  "usedQuotes": {
+    "qid-dup": {
+      "orderId": "ord-9",
+      "usedAt": "2026-09-12T17:05:46.680Z"
+    }
+  },
+  "events": [
+    {
+      "timestamp": "2026-09-12T17:05:46.680Z",
+      "kind": "payment_confirmed",
+      "detail": "order=ord-9 tx=0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  ]
+}

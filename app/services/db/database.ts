@@ -108,6 +108,7 @@ function applyMigrations(db: DatabaseSync): void {
   applyV7(db);
   applyV8(db);
   applyV9(db);
+  applyV10(db);
 }
 
 // ---------- Migración v2: cuenta única multi-rol + onboarding ----------
@@ -470,6 +471,52 @@ CREATE INDEX IF NOT EXISTS idx_pool_license ON rewards_pool_ledger(licenseOrderI
 `);
   const now = new Date().toISOString();
   db.prepare("INSERT INTO schema_migrations (version, appliedAt) VALUES (8, ?)").run(now);
+}
+
+function applyV10(db: DatabaseSync): void {
+  const done = db
+    .prepare("SELECT version FROM schema_migrations WHERE version = 10")
+    .get() as { version: number } | undefined;
+  if (done) return;
+  db.exec(`
+CREATE TABLE IF NOT EXISTS withdrawals (
+  id TEXT PRIMARY KEY,
+  userId TEXT NOT NULL REFERENCES users(id),
+  amount REAL NOT NULL,
+  fee REAL NOT NULL,
+  net REAL NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'USDT',
+  walletAddress TEXT NOT NULL,
+  txHash TEXT,
+  status TEXT NOT NULL DEFAULT 'PENDING',
+  idempotencyKey TEXT,
+  periodFirst INTEGER NOT NULL DEFAULT 1,
+  feePercent REAL NOT NULL,
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL,
+  processedAt TEXT,
+  confirmedAt TEXT,
+  rejectedAt TEXT,
+  rejectedReason TEXT,
+  UNIQUE(idempotencyKey)
+);
+CREATE INDEX IF NOT EXISTS idx_withdrawals_user ON withdrawals(userId);
+CREATE INDEX IF NOT EXISTS idx_withdrawals_status ON withdrawals(status);
+CREATE TABLE IF NOT EXISTS withdrawal_audit (
+  id TEXT PRIMARY KEY,
+  withdrawalId TEXT NOT NULL REFERENCES withdrawals(id),
+  event TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  fromStatus TEXT,
+  toStatus TEXT,
+  reason TEXT NOT NULL DEFAULT '',
+  metadata TEXT NOT NULL DEFAULT '{}',
+  createdAt TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_waudit_withdrawal ON withdrawal_audit(withdrawalId);
+`);
+  const now = new Date().toISOString();
+  db.prepare("INSERT INTO schema_migrations (version, appliedAt) VALUES (10, ?)").run(now);
 }
 
 function applyV9(db: DatabaseSync): void {

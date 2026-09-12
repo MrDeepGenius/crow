@@ -410,7 +410,7 @@ export class OpenAIProvider extends AIProvider {
     const json = await chatJSON(
       "Generá el contenido completo de un recurso de kit con bloques de contenido.",
       `Kit: "${bp.name}". Recurso: "${rb.title}". Tipo: ${rb.kind}. Resumen: ${rb.summary}
-      Audiencia: ${bp.audiencia || bp.audience}. Objetivo: ${bp.goal}
+      Audiencia: ${bp.audience}. Objetivo: ${bp.goal}
       Devolvé JSON: {
         id: "${rb.id}", title: "${rb.title}", kind: "${rb.kind}", folderId: "${rb.folderId}",
         formats: ${JSON.stringify(rb.formats)}, summary: "${rb.summary}",

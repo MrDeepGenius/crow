@@ -1,0 +1,18 @@
+{
+  "orders": {
+    "ord-1": {
+      "orderId": "ord-1",
+      "buyerId": "juan",
+      "productId": "prod-1",
+      "amount": 25,
+      "currency": "USDT",
+      "createdAt": "2026-09-12T16:05:46.654Z",
+      "expiresAt": "2026-09-12T17:04:46.654Z",
+      "fromBlock": 90,
+      "status": "EXPIRED",
+      "txHash": null,
+      "blockNumber": null,
+      "updatedAt": "2026-09-12T17:05:46.684Z"
+    }
+  }
+}
