@@ -7,13 +7,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  listCategories,
-  queryPublications,
-} from "@/app/services/marketplace/marketStore";
-import { listOrders } from "@/app/services/marketplace/marketOrders";
+import { DEFAULT_CATEGORIES } from "@/app/services/marketplace/marketTypes";
 import { computeCollections, computeCreators } from "@/app/services/marketplace/collections";
-import type { Category, ProductPublication } from "@/app/services/marketplace/marketTypes";
+import type { ProductPublication } from "@/app/services/marketplace/marketTypes";
 import {
   CategoryChip,
   EmptyMarket,
@@ -40,48 +36,41 @@ const OBJECTIVES = [
   { label: "Crear contenido", category: "Creación de Contenido", gradient: "linear-gradient(135deg, rgba(236,72,153,0.22), rgba(236,72,153,0.03))" },
 ];
 
+const CATEGORIES = DEFAULT_CATEGORIES.map((name, i) => ({ id: `cat-${i}`, name, order: i }));
+
 interface HomeData {
   pubs: ProductPublication[];
-  categories: Category[];
   stats: { sales: number; buyers: number; rating: number };
   failed: boolean;
 }
 
-function loadHome(): HomeData {
-  try {
-    const pubs = queryPublications({ sort: "relevance", pageSize: 48 }).items;
-    const orders = listOrders().filter((o) => o.status === "PAID");
-    const rated = pubs.filter((p) => p.ratingCount >= 3);
-    return {
-      pubs,
-      categories: listCategories(),
-      stats: {
-        sales: orders.length,
-        buyers: new Set(orders.map((o) => o.buyerId)).size,
-        rating: rated.length > 0 ? rated.reduce((n, p) => n + p.ratingSum / p.ratingCount, 0) / rated.length : 0,
-      },
-      failed: false,
-    };
-  } catch {
-    return { pubs: [], categories: [], stats: { sales: 0, buyers: 0, rating: 0 }, failed: true };
-  }
-}
-
 export default function MarketplacePage() {
   const router = useRouter();
-  // Estado inicial vacío = idéntico en servidor y cliente (evita hydration mismatch).
-  // Los datos reales (localStorage) se cargan solo tras el montaje.
   const [snapshot, setSnapshot] = useState<HomeData | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const all = snapshot?.pubs ?? [];
-  const categories = snapshot?.categories ?? [];
+  const categories = CATEGORIES;
   const stats = snapshot?.stats ?? { sales: 0, buyers: 0, rating: 0 };
   const loading = snapshot === null && !loadError;
 
-  const load = (): void => {
+  const load = async (): Promise<void> => {
     try {
-      setSnapshot(loadHome());
+      const res = await fetch("/api/products?pageSize=48");
+      const data = await res.json();
+      if (!data.ok) throw new Error("fetch failed");
+      const pubs = data.items as ProductPublication[];
+      const totalSales = pubs.reduce((s, p) => s + (p.salesCount ?? 0), 0);
+      const rated = pubs.filter((p) => p.ratingCount >= 3);
+      setSnapshot({
+        pubs,
+        stats: {
+          sales: totalSales,
+          buyers: 0, // buyers computed server-side; not available from product list
+          rating: rated.length > 0 ? rated.reduce((n, p) => n + p.ratingSum / p.ratingCount, 0) / rated.length : 0,
+        },
+        failed: false,
+      });
       setLoadError(false);
     } catch {
       setLoadError(true);
@@ -113,8 +102,7 @@ export default function MarketplacePage() {
   );
   const collections = useMemo(() => computeCollections(all), [all]);
   const creators = useMemo(() => {
-    const orders = listOrders();
-    return computeCreators(all, (id) => orders.filter((o) => o.productId === id && o.status === "PAID").length).slice(0, 4);
+    return computeCreators(all, (id) => all.filter((p) => p.id === id).reduce((s, p) => s + p.salesCount, 0)).slice(0, 4);
   }, [all]);
 
   const goExplore = (params: string): void => {
@@ -172,7 +160,7 @@ export default function MarketplacePage() {
 
             <div id="top10" style={{ marginTop: "56px" }}>
               <SectionHeader
-                title="🏆 Top 10 más vendidos"
+                title="Top 10 más vendidos"
                 subtitle="Los productos con más ventas reales de la plataforma."
               />
               <Top10List products={top10} />

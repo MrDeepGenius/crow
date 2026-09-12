@@ -1,5 +1,5 @@
 // ============================================
-// PUBLISH CLIENT
+// PUBLISH CLIENT — usa API backend real
 // ============================================
 
 "use client";
@@ -7,35 +7,25 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  getCreatorProfile,
-  listCategories,
-  queryPublications,
-  saveCreatorProfile,
-  savePublication,
-  slugifyTitle,
-  uid,
-  uniqueSlug,
-} from "@/app/services/marketplace/marketStore";
+import { DEFAULT_CATEGORIES } from "@/app/services/marketplace/marketTypes";
 import {
   detectLocalProducts,
   summarizeLocalProduct,
   validateForPublish,
   type LocalFormat,
 } from "@/app/services/marketplace/productAdapters";
-import type { Category, ProductBonus, ProductPublication } from "@/app/services/marketplace/marketTypes";
+import type { ProductBonus } from "@/app/services/marketplace/marketTypes";
 import { PricingAdvisorWidget } from "@/app/components/PricingAdvisor";
 import { extractFeatures } from "@/app/services/pricing/extractFeatures";
-import { selectCatalogComparables, type CatalogProduct } from "@/app/services/pricing/marketResearch";
 import type { ComparableInput } from "@/app/services/pricing/types";
 
 const FONT: string = '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 const CURRENCIES = ["USD", "EUR", "ARS", "MXN", "BRL"];
+const CATEGORIES = DEFAULT_CATEGORIES.map((name, i) => ({ id: `cat-${i}`, name, order: i }));
 
 export function PublishClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [categories, setCategories] = useState<Category[]>([]);
   const [locals, setLocals] = useState<{ format: LocalFormat; title: string }[]>([]);
   const [format, setFormat] = useState<LocalFormat | "">("");
   const [title, setTitle] = useState("");
@@ -48,7 +38,6 @@ export function PublishClient() {
   const [language, setLanguage] = useState("es");
   const [level, setLevel] = useState("todos");
   const [creatorName, setCreatorName] = useState("");
-  const [username, setUsername] = useState("");
   const [affiliateEnabled, setAffiliateEnabled] = useState(false);
   const [affiliatePercent, setAffiliatePercent] = useState("40");
   const [freeChapters, setFreeChapters] = useState("1");
@@ -58,19 +47,40 @@ export function PublishClient() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
+  const [comparables, setComparables] = useState<ComparableInput[]>([]);
 
   useEffect(() => {
-    setCategories(listCategories());
     setLocals(detectLocalProducts());
     const from = searchParams.get("from");
     if (from === "course" || from === "web" || from === "pdf" || from === "ebook" || from === "kit") {
       setFormat(from);
     }
-    const profile = getCreatorProfile();
-    if (profile) {
-      setCreatorName(profile.displayName);
-      setUsername(profile.username);
-    }
+    // Get user info from session
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.ok && data.user) {
+          setCreatorName(data.user.name);
+        }
+      })
+      .catch(() => {});
+    // Fetch comparables from API
+    fetch("/api/products?pageSize=48")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.ok && data.items) {
+          setComparables(
+            data.items.map((p: { title: string; category: string; format: string; price: { amount: number; currency: string } }) => ({
+              title: p.title,
+              category: p.category,
+              format: p.format,
+              price: p.price.amount,
+              currency: p.price.currency,
+            }))
+          );
+        }
+      })
+      .catch(() => {});
   }, [searchParams]);
 
   const summary = format ? summarizeLocalProduct(format) : null;
@@ -84,7 +94,6 @@ export function PublishClient() {
     summary,
   });
 
-  // Pricing Advisor: características reales + comparables del catálogo.
   const pricingFeatures = summary
     ? extractFeatures(summary, {
         title: title || summary.title,
@@ -94,25 +103,7 @@ export function PublishClient() {
         bonuses: bonuses.length,
       })
     : null;
-  const pricingKey = summary
-    ? `draft:${summary.format}:${slugifyTitle(title || summary.title)}`
-    : "";
-  const pricingComparables: ComparableInput[] = summary
-    ? selectCatalogComparables(
-        queryPublications({ sort: "relevance", pageSize: 48 }).items.map(
-          (p): CatalogProduct => ({
-            title: p.title,
-            category: p.category,
-            format: p.format,
-            price: p.price.amount,
-            currency: p.price.currency,
-          })
-        ),
-        category,
-        summary.format,
-        title || summary.title
-      )
-    : [];
+  const pricingKey = summary ? `draft:${summary.format}:${(title || summary.title).toLowerCase().replace(/[^a-z0-9]+/g, "-")}` : "";
 
   useEffect(() => {
     if (summary && !title) setTitle(summary.title);
@@ -120,15 +111,11 @@ export function PublishClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [format]);
 
-  const publish = (): void => {
+  const publish = async (): Promise<void> => {
     setError(null);
     setDone(null);
     if (!format || !summary) {
       setError("Seleccioná un producto generado realmente en su Studio.");
-      return;
-    }
-    if (!creatorName.trim() || !username.trim()) {
-      setError("Completá tu nombre de creador y usuario público.");
       return;
     }
     if (!check.ok) {
@@ -137,53 +124,39 @@ export function PublishClient() {
     }
     setWorking(true);
     try {
-      const creatorId = `creator-${username.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-      saveCreatorProfile({
-        id: creatorId,
-        username: username.trim(),
-        displayName: creatorName.trim(),
-        bio: "",
-        createdAt: new Date().toISOString(),
+      const res = await fetch("/api/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          format: summary.format,
+          title: title.trim(),
+          shortDescription: description.trim().slice(0, 140),
+          description: description.trim(),
+          category,
+          tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
+          language,
+          level,
+          price: Number(price),
+          currency,
+          previousPrice: previousPrice ? Number(previousPrice) : null,
+          coverSvg: summary.coverSvg,
+          previewKind: summary.format === "course" ? "course" : summary.format === "interactive_web" ? "web" : summary.format === "kit" ? "kit" : "pdf",
+          previewRef: summary.format === "ebook" ? "ebook" : summary.format === "pdf" ? "pdf" : summary.format,
+          freePreviewChapters: Math.max(1, Number(freeChapters) || 1),
+          stats: summary.stats,
+          includes: summary.includes,
+          bonuses,
+          affiliateEnabled,
+          affiliatePercent: affiliateEnabled ? Math.min(90, Math.max(0, Number(affiliatePercent) || 0)) : 0,
+          status: "PUBLISHED",
+        }),
       });
-      const now = new Date().toISOString();
-      const pub: ProductPublication = {
-        id: uid("pub"),
-        slug: uniqueSlug(title),
-        format: summary.format,
-        title: title.trim(),
-        shortDescription: description.trim().slice(0, 140),
-        description: description.trim(),
-        creatorId,
-        creatorName: creatorName.trim(),
-        category,
-        subcategory: "",
-        tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
-        language,
-        level,
-        price: { amount: Number(price), currency },
-        previousPrice: previousPrice ? { amount: Number(previousPrice), currency } : null,
-        coverSvg: summary.coverSvg,
-        previewKind: summary.format === "course" ? "course" : summary.format === "interactive_web" ? "web" : summary.format === "kit" ? "kit" : "pdf",
-        previewRef: summary.format === "ebook" ? "ebook" : summary.format === "pdf" ? "pdf" : summary.format,
-        freePreviewChapters: Math.max(1, Number(freeChapters) || 1),
-        stats: summary.stats,
-        includes: summary.includes,
-        bonuses,
-        ratingSum: 0,
-        ratingCount: 0,
-        salesCount: 0,
-        viewCount: 0,
-        featured: false,
-        affiliateEnabled,
-        affiliatePercent: affiliateEnabled ? Math.min(90, Math.max(0, Number(affiliatePercent) || 0)) : 0,
-        status: "PUBLISHED",
-        crowQuality: { score: 100, checks: [{ label: "Contenido generado verificado", ok: true }] },
-        createdAt: now,
-        publishedAt: now,
-        updatedAt: now,
-      };
-      savePublication(pub);
-      setDone(pub.slug);
+      const data = await res.json();
+      if (!data.ok) {
+        setError(data.reason === "ROLE_REQUIRED" ? "Necesitás rol de creador. Activá el rol en tu cuenta." : data.reason === "UNAUTHENTICATED" ? "Iniciá sesión para publicar." : "Error publicando");
+        return;
+      }
+      setDone(data.product.slug);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error publicando");
     } finally {
@@ -237,7 +210,7 @@ export function PublishClient() {
                 <label style={labelStyle}>Categoría</label>
                 <select value={category} onChange={(e) => setCategory(e.target.value)} style={inputStyle}>
                   <option value="">Seleccionar...</option>
-                  {categories.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+                  {CATEGORIES.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
               </div>
               <div>
@@ -265,14 +238,6 @@ export function PublishClient() {
               <div>
                 <label style={labelStyle}>Nivel</label>
                 <input value={level} onChange={(e) => setLevel(e.target.value)} style={inputStyle} />
-              </div>
-              <div>
-                <label style={labelStyle}>Nombre de creador</label>
-                <input value={creatorName} onChange={(e) => setCreatorName(e.target.value)} style={inputStyle} />
-              </div>
-              <div>
-                <label style={labelStyle}>Usuario público (para /creator/)</label>
-                <input value={username} onChange={(e) => setUsername(e.target.value)} style={inputStyle} />
               </div>
             </div>
 
@@ -322,12 +287,12 @@ export function PublishClient() {
               {check.blockers.map((b) => <div key={b} style={{ marginTop: "6px", color: "#f87171" }}>No puede publicarse: {b}</div>)}
             </div>
 
-            {summary && (
+            {summary && pricingFeatures && (
               <PricingAdvisorWidget
                 productKey={pricingKey}
                 features={pricingFeatures}
                 format={summary.format}
-                comparables={pricingComparables}
+                comparables={comparables}
                 onUsePrice={(p) => setPrice(String(p))}
                 onUsePromo={(regular, sale) => {
                   setPreviousPrice(String(regular));

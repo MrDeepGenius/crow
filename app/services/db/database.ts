@@ -109,6 +109,7 @@ function applyMigrations(db: DatabaseSync): void {
   applyV8(db);
   applyV9(db);
   applyV10(db);
+  applyV11(db);
 }
 
 // ---------- Migración v2: cuenta única multi-rol + onboarding ----------
@@ -530,6 +531,111 @@ function applyV9(db: DatabaseSync): void {
   }
   const now = new Date().toISOString();
   db.prepare("INSERT INTO schema_migrations (version, appliedAt) VALUES (9, ?)").run(now);
+}
+
+// ---------- Migración v11: productos en DB (reemplaza localStorage) ----------
+// products: publicaciones reales del marketplace. creatorId sale de la sesión
+// (inmutable post-creación). content JSON guarda el producto generado completo.
+// product_events: analytics (views, clicks, etc.) reemplazan marketStore events.
+function applyV11(db: DatabaseSync): void {
+  const done = db
+    .prepare("SELECT version FROM schema_migrations WHERE version = 11")
+    .get() as { version: number } | undefined;
+  if (done) return;
+  db.exec(`
+CREATE TABLE IF NOT EXISTS products (
+  id TEXT PRIMARY KEY,
+  slug TEXT NOT NULL UNIQUE,
+  format TEXT NOT NULL,
+  title TEXT NOT NULL,
+  shortDescription TEXT NOT NULL DEFAULT '',
+  description TEXT NOT NULL DEFAULT '',
+  creatorId TEXT NOT NULL REFERENCES users(id),
+  creatorName TEXT NOT NULL DEFAULT '',
+  category TEXT NOT NULL DEFAULT '',
+  subcategory TEXT NOT NULL DEFAULT '',
+  tags TEXT NOT NULL DEFAULT '[]',
+  language TEXT NOT NULL DEFAULT 'es',
+  level TEXT NOT NULL DEFAULT 'todos',
+  price REAL NOT NULL DEFAULT 0,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  previousPrice REAL,
+  coverSvg TEXT,
+  previewKind TEXT NOT NULL DEFAULT 'pdf',
+  previewRef TEXT NOT NULL DEFAULT '',
+  freePreviewChapters INTEGER NOT NULL DEFAULT 1,
+  stats TEXT NOT NULL DEFAULT '{}',
+  includes TEXT NOT NULL DEFAULT '[]',
+  bonuses TEXT NOT NULL DEFAULT '[]',
+  ratingSum REAL NOT NULL DEFAULT 0,
+  ratingCount INTEGER NOT NULL DEFAULT 0,
+  salesCount INTEGER NOT NULL DEFAULT 0,
+  viewCount INTEGER NOT NULL DEFAULT 0,
+  featured INTEGER NOT NULL DEFAULT 0,
+  affiliateEnabled INTEGER NOT NULL DEFAULT 0,
+  affiliatePercent REAL NOT NULL DEFAULT 40,
+  status TEXT NOT NULL DEFAULT 'DRAFT',
+  crowQuality TEXT NOT NULL DEFAULT '{"score":0,"checks":[]}',
+  content TEXT,
+  createdAt TEXT NOT NULL,
+  publishedAt TEXT,
+  updatedAt TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_products_creator ON products(creatorId);
+CREATE INDEX IF NOT EXISTS idx_products_status ON products(status);
+CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
+CREATE INDEX IF NOT EXISTS idx_products_slug ON products(slug);
+CREATE TABLE IF NOT EXISTS product_events (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL,
+  productId TEXT,
+  userId TEXT,
+  timestamp TEXT NOT NULL,
+  meta TEXT NOT NULL DEFAULT '{}'
+);
+CREATE INDEX IF NOT EXISTS idx_product_events_product ON product_events(productId);
+CREATE INDEX IF NOT EXISTS idx_product_events_type ON product_events(type);
+CREATE TABLE IF NOT EXISTS product_reviews (
+  id TEXT PRIMARY KEY,
+  userId TEXT NOT NULL REFERENCES users(id),
+  productId TEXT NOT NULL,
+  orderId TEXT NOT NULL,
+  rating INTEGER NOT NULL,
+  comment TEXT NOT NULL DEFAULT '',
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL,
+  UNIQUE(userId, productId)
+);
+CREATE INDEX IF NOT EXISTS idx_product_reviews_product ON product_reviews(productId);
+CREATE TABLE IF NOT EXISTS affiliate_clicks (
+  id TEXT PRIMARY KEY,
+  affiliateUserId TEXT NOT NULL REFERENCES users(id),
+  productId TEXT,
+  createdAt TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_affiliate_clicks_affiliate ON affiliate_clicks(affiliateUserId);
+CREATE TABLE IF NOT EXISTS affiliate_links (
+  id TEXT PRIMARY KEY,
+  affiliateUserId TEXT NOT NULL REFERENCES users(id),
+  productId TEXT NOT NULL,
+  code TEXT NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1,
+  createdAt TEXT NOT NULL,
+  UNIQUE(affiliateUserId, productId)
+);
+CREATE INDEX IF NOT EXISTS idx_affiliate_links_affiliate ON affiliate_links(affiliateUserId);
+CREATE TABLE IF NOT EXISTS emergency_reserve_ledger (
+  id TEXT PRIMARY KEY,
+  orderId TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  amount REAL NOT NULL,
+  createdAt TEXT NOT NULL,
+  UNIQUE(orderId, kind)
+);
+CREATE INDEX IF NOT EXISTS idx_reserve_order ON emergency_reserve_ledger(orderId);
+`);
+  const now = new Date().toISOString();
+  db.prepare("INSERT INTO schema_migrations (version, appliedAt) VALUES (11, ?)").run(now);
 }
 
 /** Singleton por ruta. En tests usar DATABASE_PATH temporal + closeDb(). */

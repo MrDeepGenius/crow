@@ -1,19 +1,13 @@
 // ============================================
-// EXPLORE - filtros y orden reales
+// EXPLORE - filtros y orden reales (API backend)
 // ============================================
 
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import {
-  listCategories,
-  listFavorites,
-  queryPublications,
-  type DiscoveryQuery,
-} from "@/app/services/marketplace/marketStore";
-import { computeCollections } from "@/app/services/marketplace/collections";
-import type { Category } from "@/app/services/marketplace/marketTypes";
+import { DEFAULT_CATEGORIES } from "@/app/services/marketplace/marketTypes";
+import type { ProductPublication } from "@/app/services/marketplace/marketTypes";
 import {
   EmptyMarket,
   FONT,
@@ -27,6 +21,8 @@ import {
 } from "../components/market-ui";
 import { ProductCard } from "../components/ProductCard";
 
+const CATEGORIES = DEFAULT_CATEGORIES.map((name, i) => ({ id: `cat-${i}`, name, order: i }));
+
 const FORMATS = [
   { value: "", label: "Todos" },
   { value: "course", label: "Cursos" },
@@ -36,7 +32,7 @@ const FORMATS = [
   { value: "kit", label: "Kits" },
 ];
 
-const SORTS: { value: NonNullable<DiscoveryQuery["sort"]>; label: string }[] = [
+const SORTS: { value: string; label: string }[] = [
   { value: "relevance", label: "Relevancia" },
   { value: "sales", label: "Más vendidos" },
   { value: "rating", label: "Mejor valorados" },
@@ -47,66 +43,59 @@ const SORTS: { value: NonNullable<DiscoveryQuery["sort"]>; label: string }[] = [
 
 function ExploreClient() {
   const searchParams = useSearchParams();
-  // Primer render idéntico al servidor (skeleton); datos tras el montaje.
   const [mounted, setMounted] = useState(false);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<ProductPublication[]>([]);
+  const [total, setTotal] = useState(0);
+  const [failed, setFailed] = useState(false);
   useEffect(() => {
-    setCategories(listCategories());
-    setLoading(false);
     setMounted(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
   const [q, setQ] = useState(searchParams.get("q") ?? "");
   const [category, setCategory] = useState(searchParams.get("category") ?? "");
   const [format, setFormat] = useState(searchParams.get("format") ?? "");
-  const [sort, setSort] = useState<NonNullable<DiscoveryQuery["sort"]>>(
-    (searchParams.get("sort") as NonNullable<DiscoveryQuery["sort"]>) || "relevance"
-  );
+  const [sort, setSort] = useState(searchParams.get("sort") || "relevance");
   const [maxPrice, setMaxPrice] = useState("");
   const [minRating, setMinRating] = useState("");
-  const [favoritesOnly, setFavoritesOnly] = useState(false);
-  const [collectionId, setCollectionId] = useState(searchParams.get("collection") ?? "");
   const [page, setPage] = useState(1);
   const [drawer, setDrawer] = useState(false);
+  const pageSize = 12;
 
   const withPageReset = (apply: () => void): void => {
     apply();
     setPage(1);
   };
 
-  const result = useMemo(() => {
-    if (!mounted) return { items: [], total: 0, page: 1, pageSize: 12, failed: false };
+  const fetchProducts = useCallback(async () => {
+    if (!mounted) return;
+    setLoading(true);
     try {
-      let res = queryPublications({
-        search: q || undefined,
-        category: category || undefined,
-        format: (format || undefined) as DiscoveryQuery["format"],
-        maxPrice: maxPrice ? Number(maxPrice) : undefined,
-        minRating: minRating ? Number(minRating) : undefined,
-        sort,
-        page,
-        pageSize: 12,
-      });
-      if (collectionId) {
-        const all = queryPublications({ sort, pageSize: 48 }).items;
-        const col = computeCollections(all).find((c) => c.id === collectionId);
-        const ids = new Set(col?.productIds ?? []);
-        const items = res.items.filter((p) => ids.has(p.id));
-        res = { ...res, items, total: items.length };
-      }
-      if (favoritesOnly) {
-        const favs = new Set(listFavorites());
-        const items = res.items.filter((p) => favs.has(p.id));
-        res = { ...res, items, total: items.length };
-      }
-      return { ...res, failed: false };
+      const params = new URLSearchParams();
+      if (q) params.set("q", q);
+      if (category) params.set("category", category);
+      if (format) params.set("format", format);
+      if (sort) params.set("sort", sort);
+      if (maxPrice) params.set("maxPrice", maxPrice);
+      if (minRating) params.set("minRating", minRating);
+      params.set("page", String(page));
+      params.set("pageSize", String(pageSize));
+      const res = await fetch(`/api/products?${params.toString()}`);
+      const data = await res.json();
+      if (!data.ok) throw new Error("fetch failed");
+      setItems(data.items as ProductPublication[]);
+      setTotal(data.total);
+      setFailed(false);
     } catch {
-      return { items: [], total: 0, page: 1, pageSize: 12, failed: true };
+      setFailed(true);
+    } finally {
+      setLoading(false);
     }
-  }, [q, category, format, sort, maxPrice, minRating, favoritesOnly, collectionId, page, mounted]);
+  }, [mounted, q, category, format, sort, maxPrice, minRating, page]);
 
-  const loadError = result.failed;
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   const filters = (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -114,7 +103,7 @@ function ExploreClient() {
         <div style={filterLabel}>Categoría</div>
         <select value={category} onChange={(e) => withPageReset(() => setCategory(e.target.value))} style={filterInput} aria-label="Categoría">
           <option value="">Todas</option>
-          {categories.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+          {CATEGORIES.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
         </select>
       </div>
       <div>
@@ -125,7 +114,7 @@ function ExploreClient() {
       </div>
       <div>
         <div style={filterLabel}>Orden</div>
-        <select value={sort} onChange={(e) => withPageReset(() => setSort(e.target.value as NonNullable<DiscoveryQuery["sort"]>))} style={filterInput} aria-label="Orden">
+        <select value={sort} onChange={(e) => withPageReset(() => setSort(e.target.value))} style={filterInput} aria-label="Orden">
           {SORTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
       </div>
@@ -142,11 +131,7 @@ function ExploreClient() {
           <option value="4.5">4.5+ estrellas</option>
         </select>
       </div>
-      <label style={{ display: "flex", gap: "8px", alignItems: "center", fontSize: "13px", color: MK.muted }}>
-        <input type="checkbox" checked={favoritesOnly} onChange={(e) => withPageReset(() => setFavoritesOnly(e.target.checked))} />
-        Solo favoritos
-      </label>
-      {(q || category || format || maxPrice || minRating || favoritesOnly || collectionId) && (
+      {(q || category || format || maxPrice || minRating) && (
         <button
           onClick={() => {
             withPageReset(() => {
@@ -155,8 +140,6 @@ function ExploreClient() {
               setFormat("");
               setMaxPrice("");
               setMinRating("");
-              setFavoritesOnly(false);
-              setCollectionId("");
               setSort("relevance");
             });
           }}
@@ -174,7 +157,7 @@ function ExploreClient() {
       <MarketplaceHeader />
       <div style={{ maxWidth: "1250px", margin: "0 auto", padding: "32px 24px 90px" }}>
         <h1 style={{ fontSize: "28px", margin: "0 0 6px" }}>Explorar</h1>
-        <p style={{ color: MK.muted, fontSize: "14px", margin: "0 0 20px" }}>{result.total} resultado(s) reales.</p>
+        <p style={{ color: MK.muted, fontSize: "14px", margin: "0 0 20px" }}>{total} resultado(s).</p>
         <form
           onSubmit={(e) => e.preventDefault()}
           style={{ display: "flex", gap: "10px", marginBottom: "20px" }}
@@ -196,22 +179,22 @@ function ExploreClient() {
           <div style={{ minWidth: 0 }}>
             {loading ? (
               <SkeletonCards count={6} />
-            ) : loadError ? (
-              <MarketError onRetry={() => window.location.reload()} />
-            ) : result.total === 0 ? (
+            ) : failed ? (
+              <MarketError onRetry={() => fetchProducts()} />
+            ) : total === 0 ? (
               <EmptyMarket title="Sin resultados" detail="Probá con otra búsqueda o limpiá los filtros." />
             ) : (
               <>
                 <ProductGrid>
-                  {result.items.map((p) => (
+                  {items.map((p) => (
                     <ProductCard key={p.id} product={p} />
                   ))}
                 </ProductGrid>
-                {result.total > result.pageSize && (
+                {total > pageSize && (
                   <div style={{ display: "flex", gap: "12px", justifyContent: "center", marginTop: "24px", alignItems: "center" }}>
                     <button disabled={page <= 1} onClick={() => setPage(page - 1)} style={pageBtn(page <= 1)}>Anterior</button>
-                    <span style={{ color: MK.muted, fontSize: "13px" }}>Página {result.page}</span>
-                    <button disabled={result.page * result.pageSize >= result.total} onClick={() => setPage(page + 1)} style={pageBtn(result.page * result.pageSize >= result.total)}>
+                    <span style={{ color: MK.muted, fontSize: "13px" }}>Página {page}</span>
+                    <button disabled={page * pageSize >= total} onClick={() => setPage(page + 1)} style={pageBtn(page * pageSize >= total)}>
                       Siguiente
                     </button>
                   </div>

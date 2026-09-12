@@ -272,7 +272,10 @@ export function RatingStars({ sum, count, minReviews }: { sum: number; count: nu
 export function FavoriteButton({ productId, size }: { productId: string; size?: number }) {
   const [fav, setFav] = useState(false);
   useEffect(() => {
-    import("@/app/services/marketplace/marketStore").then((m) => setFav(m.isFavorite(productId)));
+    try {
+      const favs = JSON.parse(window.localStorage.getItem("crow_favorites") ?? "[]") as string[];
+      setFav(favs.includes(productId));
+    } catch { /* ignore */ }
   }, [productId]);
   return (
     <button
@@ -281,7 +284,17 @@ export function FavoriteButton({ productId, size }: { productId: string; size?: 
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        import("@/app/services/marketplace/marketStore").then((m) => setFav(m.toggleFavorite(productId)));
+        try {
+          let favs = JSON.parse(window.localStorage.getItem("crow_favorites") ?? "[]") as string[];
+          if (favs.includes(productId)) {
+            favs = favs.filter((f) => f !== productId);
+            setFav(false);
+          } else {
+            favs.push(productId);
+            setFav(true);
+          }
+          window.localStorage.setItem("crow_favorites", JSON.stringify(favs));
+        } catch { /* ignore */ }
       }}
       className="mk-btn"
       style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "50%", width: size ?? 36, height: size ?? 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: fav ? "#f59e0b" : "#fff", fontSize: "16px" }}

@@ -10,7 +10,6 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import QRCode from "qrcode";
-import { getPublicationBySlug, logEvent } from "@/app/services/marketplace/marketStore";
 import type { ProductPublication } from "@/app/services/marketplace/marketTypes";
 import { AccountMenu } from "@/app/components/AccountMenu";
 
@@ -104,13 +103,16 @@ export function CheckoutClient() {
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    const found = getPublicationBySlug(params.slug);
-    if (!found || found.status !== "PUBLISHED") {
-      setMissing(true);
-      return;
-    }
-    setProduct(found);
-    logEvent("checkout_started", found.id, null);
+    fetch(`/api/products/${encodeURIComponent(params.slug)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.ok || !data.product) {
+          setMissing(true);
+          return;
+        }
+        setProduct(data.product as ProductPublication);
+      })
+      .catch(() => setMissing(true));
     void fetch("/api/auth/me")
       .then((r) => r.json() as Promise<{ ok: boolean; user?: { email: string } | null }>)
       .then((data) => {
@@ -229,7 +231,6 @@ export function CheckoutClient() {
         expiresAt: regData.expiresAt ?? new Date(Date.now() + 30 * 60000).toISOString(),
         status: regData.status ?? "PENDING",
       });
-      logEvent("checkout_started", product.id, userEmail, { orderId: regData.orderId });
       await setupQuote(regData.orderId);
     } catch (err) {
       if (err instanceof Error && err.message === "UNAUTHENTICATED") {
@@ -297,12 +298,6 @@ export function CheckoutClient() {
     setPaidTx(tx.toLowerCase());
     setPaidBlock(block);
     setOrder({ ...order, status: "PAID" });
-    if (product) {
-      logEvent("purchase_completed", product.id, userEmail, {
-        orderId: order.id,
-        txHash: tx.toLowerCase(),
-      });
-    }
     try {
       let deviceId = window.localStorage.getItem("crow_device_id");
       if (!deviceId) {

@@ -2,9 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getPublication, logEvent } from "@/app/services/marketplace/marketStore";
-import { listEntitlements } from "@/app/services/marketplace/marketLedger";
-import type { Entitlement, ProductPublication } from "@/app/services/marketplace/marketTypes";
+import type { ProductPublication } from "@/app/services/marketplace/marketTypes";
 import { AccountMenu } from "@/app/components/AccountMenu";
 import { BackButton } from "@/app/components/BackButton";
 
@@ -20,37 +18,20 @@ export function MyProductsClient() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [items, setItems] = useState<{ product: ProductPublication; grantedAt: string }[]>([]);
-  const [legacy, setLegacy] = useState<{ entitlement: Entitlement; product: ProductPublication }[]>([]);
+  const [loading, setLoading] = useState(false);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    void fetch("/api/auth/me")
-      .then((r) => r.json() as Promise<{ ok: boolean; user?: { email: string } | null }>)
+    fetch("/api/auth/me")
+      .then((r) => r.json())
       .then((data) => {
         setUserEmail(data.user?.email ?? null);
         setAuthChecked(true);
       })
       .catch(() => {
-        setUserEmail(null);
         setAuthChecked(true);
       });
-    // Legado de este dispositivo (compras anónimas anteriores a la cuenta).
-    try {
-      const buyer = window.localStorage.getItem("crow_buyer_id");
-      if (buyer) {
-        setLegacy(
-          listEntitlements()
-            .filter((e) => e.userId === buyer && !e.revokedAt)
-            .flatMap((entitlement) => {
-              const product = getPublication(entitlement.productId);
-              return product ? [{ entitlement, product }] : [];
-            })
-        );
-      }
-    } catch {
-      // sin legado
-    }
   }, []);
 
   useEffect(() => {
@@ -58,20 +39,33 @@ export function MyProductsClient() {
       setItems([]);
       return;
     }
-    void fetch("/api/my-products")
-      .then((r) => r.json() as Promise<{ ok: boolean; items?: ServerItem[] }>)
-      .then((data) => {
-        if (!data.ok || !data.items) return;
-        setItems(
-          data.items.flatMap((it) => {
-            const product = getPublication(it.productId);
-            return product ? [{ product, grantedAt: it.grantedAt }] : [];
+    setLoading(true);
+    fetch("/api/my-products")
+      .then((r) => r.json())
+      .then(async (data) => {
+        if (!data.ok || !data.items) {
+          setItems([]);
+          return;
+        }
+        // Fetch product details for each entitlement
+        const products = await Promise.all(
+          data.items.map(async (it: ServerItem) => {
+            try {
+              const res = await fetch(`/api/products/${encodeURIComponent(it.productId)}`);
+              const p = await res.json();
+              if (p.ok && p.product) {
+                return { product: p.product as ProductPublication, grantedAt: it.grantedAt };
+              }
+              return null;
+            } catch {
+              return null;
+            }
           })
         );
+        setItems(products.filter(Boolean) as { product: ProductPublication; grantedAt: string }[]);
       })
-      .catch(() => {
-        // sin conexión: se muestra el legado si existe
-      });
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false));
   }, [userEmail]);
 
   const downloadProduct = async (product: ProductPublication): Promise<void> => {
@@ -98,7 +92,6 @@ export function MyProductsClient() {
         });
         triggerDownload(new Blob([bytes as unknown as BlobPart], { type: "application/zip" }), `${product.slug}.zip`);
       }
-      logEvent("download", product.id, userEmail);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error descargando");
     } finally {
@@ -128,12 +121,9 @@ export function MyProductsClient() {
             <Link href="/login?return=/my-products" style={{ display: "inline-block", marginTop: "16px", padding: "12px 20px", borderRadius: "10px", background: "#7c3aed", color: "#fff", fontWeight: "bold", textDecoration: "none" }}>
               Iniciar sesión
             </Link>
-            {legacy.length > 0 && (
-              <p style={{ color: "#666", fontSize: "12px", marginTop: "16px" }}>
-                Tenés {legacy.length} compra(s) anónima(s) en este dispositivo (legado). Iniciá sesión y comprá con cuenta para acceso permanente.
-              </p>
-            )}
           </div>
+        ) : loading ? (
+          <div style={{ color: "#888" }}>Cargando tus productos...</div>
         ) : items.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 20px", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "16px" }}>
             <div style={{ fontSize: "18px", marginBottom: "8px" }}>Todavía no tenés productos comprados.</div>
@@ -157,10 +147,11 @@ export function MyProductsClient() {
                   {product.format === "interactive_web" && (
                     <Link href={`/product/${product.id}/interactive`} style={actionBtn}>Abrir</Link>
                   )}
-                  {(product.format === "pdf" || product.format === "ebook" || product.format === "kit") && (
-                    <button onClick={() => void downloadProduct(product)} disabled={working} style={{ ...actionBtnCss, opacity: working ? 0.6 : 1 }}>
-                      Descargar
-                    </button>
+                  {(product.format === "pdf" || product.format === "ebook") && (
+                    <button onClick={() => downloadProduct(product)} disabled={working} style={actionBtn}>Descargar PDF</button>
+                  )}
+                  {product.format === "kit" && (
+                    <button onClick={() => downloadProduct(product)} disabled={working} style={actionBtn}>Descargar ZIP</button>
                   )}
                 </div>
               </div>
@@ -175,33 +166,22 @@ export function MyProductsClient() {
 
 const actionBtn: React.CSSProperties = {
   display: "inline-block",
-  padding: "10px 18px",
-  borderRadius: "10px",
-  background: "#7c3aed",
-  color: "#fff",
+  padding: "8px 16px",
+  borderRadius: "8px",
+  background: "rgba(124,58,237,0.15)",
+  border: "1px solid rgba(124,58,237,0.3)",
+  color: "#c4b5fd",
+  fontSize: "13px",
   fontWeight: "bold",
   textDecoration: "none",
-  fontSize: "13px",
-};
-
-const actionBtnCss: React.CSSProperties = {
-  padding: "10px 18px",
-  borderRadius: "10px",
-  border: "none",
-  background: "#7c3aed",
-  color: "#fff",
-  fontWeight: "bold",
   cursor: "pointer",
-  fontSize: "13px",
 };
 
-function triggerDownload(blob: Blob, fileName: string): void {
+function triggerDownload(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = fileName;
-  document.body.appendChild(a);
+  a.download = filename;
   a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  URL.revokeObjectURL(url);
 }
