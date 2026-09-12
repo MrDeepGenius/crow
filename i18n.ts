@@ -1,11 +1,10 @@
-import { createNextIntl } from 'next-intl';
 import { getRequestConfig } from 'next-intl/server';
 
 export const locales = ['en', 'es', 'pt', 'ru', 'it', 'zh'];
 export const defaultLocale = 'en';
 
 export default getRequestConfig(async ({ requestLocale }) => {
-  let locale = await requestLocale;
+  let locale: string = await requestLocale ?? defaultLocale;
   
   // Ensure that a valid locale is used
   if (!locales.includes(locale as any)) {
