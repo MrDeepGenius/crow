@@ -21,7 +21,7 @@ import type {
   PublicationStatus,
   WalletTransaction,
 } from "@/app/services/marketplace/marketTypes";
-import { Sidebar, AppHeader } from "@/app/affiliates/components/Shell";
+import { Sidebar, AppHeader } from "../affiliates/components/Shell";
 import { GOLD, GOLD_SOFT, creatorCardStyle, CREATOR_CSS } from "./theme";
 import {
   C,
