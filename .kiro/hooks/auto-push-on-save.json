@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Auto Push on File Save",
+      "trigger": "PostFileSave",
+      "description": "Automatically commits and pushes changes to GitHub whenever a file is saved",
+      "action": {
+        "type": "command",
+        "command": "cd /d \"c:\\Users\\gabii\\Desktop\\crow\" && git add . && git commit -m \"Auto-commit: Updated files\" && git push"
+      }
+    }
+  ]
+}
