@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUserFromRequest } from "@/app/services/auth/auth";
 import { requireRole } from "@/app/services/db/profiles";
 import { createProduct, queryProducts, type CreateProductInput, type ProductQuery } from "@/app/services/db/products";
+import { checkLicenseForCreation } from "@/app/services/licenses/service";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (!user) return NextResponse.json({ ok: false, reason: "UNAUTHENTICATED" }, { status: 401 });
     if (!requireRole(user.id, "creator")) {
       return NextResponse.json({ ok: false, reason: "ROLE_REQUIRED" }, { status: 403 });
+    }
+    // Verificación de licencia Creator activa (server-side, sin bypass).
+    const licenseCheck = checkLicenseForCreation(user.id);
+    if (!licenseCheck.ok) {
+      return NextResponse.json(
+        { ok: false, error: licenseCheck.code, message: licenseCheck.message },
+        { status: 403 }
+      );
     }
     const body = (await req.json()) as Partial<CreateProductInput>;
     if (!body.title || !body.description || !body.category || !(body.price && body.price > 0)) {

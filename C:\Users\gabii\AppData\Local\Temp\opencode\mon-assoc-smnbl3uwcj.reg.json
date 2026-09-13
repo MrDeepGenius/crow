@@ -1,0 +1,36 @@
+{
+  "usedTx": {
+    "0x1111111111111111111111111111111111111111111111111111111111111111": {
+      "orderId": "ord-b",
+      "usedAt": "2026-09-13T14:39:06.928Z"
+    }
+  },
+  "usedQuotes": {
+    "auto-ord-b": {
+      "orderId": "ord-b",
+      "usedAt": "2026-09-13T14:39:06.928Z"
+    }
+  },
+  "events": [
+    {
+      "timestamp": "2026-09-13T14:39:06.926Z",
+      "kind": "monitor_matched",
+      "detail": "tx=0x1111111111111111111111111111111111111111111111111111111111111111 order=ord-b amount=25"
+    },
+    {
+      "timestamp": "2026-09-13T14:39:06.927Z",
+      "kind": "monitor_ambiguous",
+      "detail": "tx=0x2222222222222222222222222222222222222222222222222222222222222222 reason=AMBIGUOUS_AMOUNT orders=ord-a,ord-c"
+    },
+    {
+      "timestamp": "2026-09-13T14:39:06.928Z",
+      "kind": "payment_confirmed",
+      "detail": "order=ord-b tx=0x1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    {
+      "timestamp": "2026-09-13T14:39:06.928Z",
+      "kind": "monitor_confirmed",
+      "detail": "order=ord-b tx=0x1111111111111111111111111111111111111111111111111111111111111111 block=100"
+    }
+  ]
+}

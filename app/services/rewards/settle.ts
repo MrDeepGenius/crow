@@ -8,12 +8,15 @@ import { getDb } from "../db/database";
 import { addValidSaleVolume } from "./volume";
 import { creditLicensePool } from "./pool";
 import { promoteWaitingRewards } from "./rewards";
+import { activateLicense } from "../licenses/service";
+import { tierFromProductId } from "../licenses/catalog";
 
 export interface SettleResult {
   volumeCp: number | null;
   poolCredited: number | null;
   unlockedLevels: number[];
   promotedWaiting: number;
+  licenseActivated: boolean | null;
   errors: string[];
 }
 
@@ -33,7 +36,7 @@ export function settlePaidOrder(orderId: string): SettleResult {
     | undefined;
   const errors: string[] = [];
   if (!order || order.status !== "PAID") {
-    return { volumeCp: null, poolCredited: null, unlockedLevels: [], promotedWaiting: 0, errors: ["ORDER_NOT_PAID"] };
+    return { volumeCp: null, poolCredited: null, unlockedLevels: [], promotedWaiting: 0, licenseActivated: null, errors: ["ORDER_NOT_PAID"] };
   }
   let volumeCp: number | null = null;
   let unlockedLevels: number[] = [];
@@ -60,5 +63,21 @@ export function settlePaidOrder(orderId: string): SettleResult {
   } catch {
     // best-effort
   }
-  return { volumeCp, poolCredited, unlockedLevels, promotedWaiting, errors };
+  // Activar licencia Creator tras pago confirmado (server-side, sin bypass).
+  let licenseActivated: boolean | null = null;
+  if (isLicenseOrder(order.id)) {
+    try {
+      const productId = db.prepare("SELECT productId FROM orders WHERE id = ?").get(order.id) as
+        | { productId: string }
+        | undefined;
+      const tier = productId ? tierFromProductId(productId.productId) : null;
+      if (tier) {
+        const res = activateLicense(order.userId, order.id, tier.id);
+        licenseActivated = res.created;
+      }
+    } catch (err) {
+      errors.push(err instanceof Error ? err.message : "LICENSE_ACTIVATION_SKIPPED");
+    }
+  }
+  return { volumeCp, poolCredited, unlockedLevels, promotedWaiting, licenseActivated, errors };
 }

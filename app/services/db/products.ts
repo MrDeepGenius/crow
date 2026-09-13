@@ -259,7 +259,7 @@ export function createProduct(input: CreateProductInput): Product {
      previewKind, previewRef, freePreviewChapters, stats, includes, bonuses,
      ratingSum, ratingCount, salesCount, viewCount, featured, affiliateEnabled, affiliatePercent,
      status, crowQuality, content, createdAt, publishedAt, updatedAt)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   ).run(
     row.id, row.slug, row.format, row.title, row.shortDescription, row.description, row.creatorId, row.creatorName,
     row.category, row.subcategory, row.tags, row.language, row.level, row.price, row.currency, row.previousPrice,

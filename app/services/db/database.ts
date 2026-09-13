@@ -110,6 +110,7 @@ function applyMigrations(db: DatabaseSync): void {
   applyV9(db);
   applyV10(db);
   applyV11(db);
+  applyV12(db);
 }
 
 // ---------- Migración v2: cuenta única multi-rol + onboarding ----------
@@ -636,6 +637,40 @@ CREATE INDEX IF NOT EXISTS idx_reserve_order ON emergency_reserve_ledger(orderId
 `);
   const now = new Date().toISOString();
   db.prepare("INSERT INTO schema_migrations (version, appliedAt) VALUES (11, ?)").run(now);
+}
+
+// ---------- Migración v12: licencias Creator server-side ----------
+// creator_licenses: 1 fila por (userId, orderId) — la licencia se activa
+// SOLO tras pago confirmado (order PAID + orderType='license'). El plan y
+// los límites (maxProducts, maxPublished, durationDays) se fijan desde el
+// catálogo del servidor, nunca del cliente. status: ACTIVE | EXPIRED |
+// CANCELLED | PENDING | REVOKED. expiresAt se calcula con durationDays.
+function applyV12(db: DatabaseSync): void {
+  const done = db
+    .prepare("SELECT version FROM schema_migrations WHERE version = 12")
+    .get() as { version: number } | undefined;
+  if (done) return;
+  db.exec(`
+CREATE TABLE IF NOT EXISTS creator_licenses (
+  id TEXT PRIMARY KEY,
+  userId TEXT NOT NULL REFERENCES users(id),
+  plan TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'PENDING',
+  orderId TEXT NOT NULL UNIQUE REFERENCES orders(id),
+  maxProducts INTEGER NOT NULL,
+  maxPublished INTEGER NOT NULL,
+  durationDays INTEGER NOT NULL,
+  purchasedAt TEXT NOT NULL,
+  expiresAt TEXT NOT NULL,
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_licenses_user ON creator_licenses(userId);
+CREATE INDEX IF NOT EXISTS idx_licenses_status ON creator_licenses(status);
+CREATE INDEX IF NOT EXISTS idx_licenses_user_status ON creator_licenses(userId, status);
+`);
+  const now = new Date().toISOString();
+  db.prepare("INSERT INTO schema_migrations (version, appliedAt) VALUES (12, ?)").run(now);
 }
 
 /** Singleton por ruta. En tests usar DATABASE_PATH temporal + closeDb(). */
