@@ -1,7 +1,9 @@
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
+import { use } from 'react';
 
-export default function HomePage({ params: { locale } }: { params: { locale: string } }) {
+export default function HomePage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = use(params);
   const t = useTranslations();
 
   return (
