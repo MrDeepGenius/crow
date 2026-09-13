@@ -21,8 +21,8 @@ import type {
   PublicationStatus,
   WalletTransaction,
 } from "@/app/services/marketplace/marketTypes";
-import { Sidebar, AppHeader } from "@/app/affiliates/components/Shell";
-import { CreatorLogin } from "./components/CreatorLogin";
+import { Sidebar, AppHeader } from "../affiliates/components/Shell";
+import { CreatorLogin } from "@/app/creator-os/components/CreatorLogin";
 import AnimatedBackground from "@/app/components/AnimatedBackground";
 import { GOLD, GOLD_SOFT, creatorCardStyle, CREATOR_CSS } from "./theme";
 import {
