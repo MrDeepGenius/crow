@@ -1,12 +1,15 @@
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
+import AnimatedBackground from '../components/AnimatedBackground';
 
 export default function HomePage({ params: { locale } }: { params: { locale: string } }) {
   const t = useTranslations();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100">
+      <AnimatedBackground />
+      <div className="relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Hero Section */}
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
@@ -88,6 +91,7 @@ export default function HomePage({ params: { locale } }: { params: { locale: str
               <div className="font-medium">{t('navigation.admin')}</div>
             </Link>
           </div>
+        </div>
         </div>
       </div>
     </div>
