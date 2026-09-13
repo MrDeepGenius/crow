@@ -50,6 +50,8 @@ import {
 } from "./components/ui";
 import { Sparkline, AreaChart, Donut, bucketize } from "./components/charts";
 import { RewardsTab } from "./components/RewardsTab";
+import { AffiliateLogin } from "./components/AffiliateLogin";
+import AnimatedBackground from "@/app/components/AnimatedBackground";
 import { PhotoUploader } from "@/app/components/CreatorPageEditor";
 
 type Tab = "inicio" | "promotions" | "links" | "commissions" | "rewards" | "analytics" | "invites" | "team" | "saleslog" | "kit" | "referrals" | "notificaciones" | "pagos" | "settings";
@@ -155,32 +157,17 @@ export function AffiliateHubClient() {
   };
 
   if (!profile) {
-    return (
-      <ToastProvider>
-        <main style={{ minHeight: "100vh", background: C.bg, color: "#fff", fontFamily: FONT, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
-          <div className="aff-fadein" style={{ maxWidth: "480px", width: "100%", ...{ background: "radial-gradient(120% 140% at 50% 0%, rgba(124,58,237,0.16) 0%, rgba(124,58,237,0) 55%), #0c0c10" }, border: "1px solid rgba(255,255,255,0.09)", borderRadius: "22px", padding: "36px", textAlign: "center" }}>
-            <img src="/crowlogo.png" alt="Crow" style={{ width: "52px", height: "52px", objectFit: "contain", marginBottom: "12px" }} />
-            <h1 style={{ fontSize: "26px", margin: "0 0 8px" }}>Affiliate OS</h1>
-            <p style={{ color: C.muted, margin: "0 0 20px", fontSize: "14px" }}>Tu centro de operaciones como afiliado de Crow Market.</p>
-            <div style={{ display: "flex", gap: "8px" }}>
-              <label htmlFor="aff-login" style={{ position: "absolute", left: "-9999px" }}>Tu usuario o email</label>
-              <input id="aff-login" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") login(); }} placeholder="Tu usuario o email" style={{ flex: 1, background: "#050508", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "10px", color: "#fff", padding: "12px 14px", fontSize: "14px", fontFamily: FONT }} />
-              <button onClick={login} className="aff-btn" style={{ padding: "12px 20px", borderRadius: "10px", border: "none", background: C.violet, color: "#fff", fontWeight: "bold", cursor: "pointer" }}>
-                Entrar
-              </button>
-            </div>
-          </div>
-        </main>
-        <style>{GLOBAL_CSS}</style>
-      </ToastProvider>
-    );
+    return <AffiliateLogin onLogin={login} />;
   }
 
   const section = SECTION_TITLES[tab];
 
   return (
     <ToastProvider>
-      <main style={{ minHeight: "100vh", background: C.bg, color: "#fff", fontFamily: FONT, display: "flex" }}>
+      <main style={{ minHeight: "100vh", background: C.bg, color: "#fff", fontFamily: FONT, display: "flex", position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none", opacity: 0.4 }}>
+          <AnimatedBackground />
+        </div>
         <Sidebar
           active={tab as ShellSection}
           collapsed={collapsed}
@@ -190,7 +177,7 @@ export function AffiliateHubClient() {
           walletSummary={walletSummary}
           userName={userId}
         />
-        <div style={{ flex: 1, minWidth: 0, maxWidth: "1240px", margin: "0 auto", padding: "24px clamp(16px, 3vw, 36px) 64px", width: "100%" }}>
+        <div style={{ flex: 1, minWidth: 0, maxWidth: "1240px", margin: "0 auto", padding: "24px clamp(16px, 3vw, 36px) 64px", width: "100%", position: "relative", zIndex: 1 }}>
           <AppHeader
             title={section.title}
             subtitle={section.subtitle}
@@ -395,8 +382,8 @@ function round(n: number): number {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ padding: "16px", borderRadius: "14px", background: "#0c0c0f", border: "1px solid rgba(255,255,255,0.08)" }}>
-      <div style={{ color: "#666", fontSize: "12px", marginBottom: "6px" }}>{label}</div>
+    <div className="aff-card" style={{ padding: "16px", borderRadius: "14px", background: "linear-gradient(135deg, rgba(124,58,237,0.05) 0%, rgba(124,58,237,0) 60%), #0c0c0f", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 4px 16px rgba(0,0,0,0.3)" }}>
+      <div style={{ color: "#888", fontSize: "12px", marginBottom: "6px" }}>{label}</div>
       <div style={{ fontSize: "22px", fontWeight: "bold" }}>{value}</div>
     </div>
   );

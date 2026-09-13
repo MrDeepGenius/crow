@@ -7,13 +7,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  listCategories,
-  queryPublications,
-} from "@/app/services/marketplace/marketStore";
-import { listOrders } from "@/app/services/marketplace/marketOrders";
+import { DEFAULT_CATEGORIES } from "@/app/services/marketplace/marketTypes";
 import { computeCollections, computeCreators } from "@/app/services/marketplace/collections";
-import type { Category, ProductPublication } from "@/app/services/marketplace/marketTypes";
+import type { ProductPublication } from "@/app/services/marketplace/marketTypes";
 import {
   CategoryChip,
   EmptyMarket,
@@ -21,13 +17,14 @@ import {
   MARKET_CSS,
   MarketLights,
   MarketError,
-  MarketplaceHeader,
   MarketplaceHero,
   MK,
   ProductGrid,
   SectionHeader,
   SkeletonCards,
 } from "./components/market-ui";
+import { MarketSidebar } from "./components/MarketSidebar";
+import { Top10List } from "./components/Top10List";
 import { ProductCard } from "./components/ProductCard";
 
 const OBJECTIVES = [
@@ -39,47 +36,41 @@ const OBJECTIVES = [
   { label: "Crear contenido", category: "Creación de Contenido", gradient: "linear-gradient(135deg, rgba(236,72,153,0.22), rgba(236,72,153,0.03))" },
 ];
 
+const CATEGORIES = DEFAULT_CATEGORIES.map((name, i) => ({ id: `cat-${i}`, name, order: i }));
+
 interface HomeData {
   pubs: ProductPublication[];
-  categories: Category[];
   stats: { sales: number; buyers: number; rating: number };
   failed: boolean;
 }
 
-function loadHome(): HomeData {
-  try {
-    const pubs = queryPublications({ sort: "relevance", pageSize: 48 }).items;
-    const orders = listOrders().filter((o) => o.status === "PAID");
-    const rated = pubs.filter((p) => p.ratingCount >= 3);
-    return {
-      pubs,
-      categories: listCategories(),
-      stats: {
-        sales: orders.length,
-        buyers: new Set(orders.map((o) => o.buyerId)).size,
-        rating: rated.length > 0 ? rated.reduce((n, p) => n + p.ratingSum / p.ratingCount, 0) / rated.length : 0,
-      },
-      failed: false,
-    };
-  } catch {
-    return { pubs: [], categories: [], stats: { sales: 0, buyers: 0, rating: 0 }, failed: true };
-  }
-}
-
 export default function MarketplacePage() {
   const router = useRouter();
-  // Estado inicial vacío = idéntico en servidor y cliente (evita hydration mismatch).
-  // Los datos reales (localStorage) se cargan solo tras el montaje.
   const [snapshot, setSnapshot] = useState<HomeData | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const all = snapshot?.pubs ?? [];
-  const categories = snapshot?.categories ?? [];
+  const categories = CATEGORIES;
   const stats = snapshot?.stats ?? { sales: 0, buyers: 0, rating: 0 };
   const loading = snapshot === null && !loadError;
 
-  const load = (): void => {
+  const load = async (): Promise<void> => {
     try {
-      setSnapshot(loadHome());
+      const res = await fetch("/api/products?pageSize=48");
+      const data = await res.json();
+      if (!data.ok) throw new Error("fetch failed");
+      const pubs = data.items as ProductPublication[];
+      const totalSales = pubs.reduce((s, p) => s + (p.salesCount ?? 0), 0);
+      const rated = pubs.filter((p) => p.ratingCount >= 3);
+      setSnapshot({
+        pubs,
+        stats: {
+          sales: totalSales,
+          buyers: 0, // buyers computed server-side; not available from product list
+          rating: rated.length > 0 ? rated.reduce((n, p) => n + p.ratingSum / p.ratingCount, 0) / rated.length : 0,
+        },
+        failed: false,
+      });
       setLoadError(false);
     } catch {
       setLoadError(true);
@@ -95,6 +86,7 @@ export default function MarketplacePage() {
     () => [...all].sort((a, b) => b.viewCount + b.salesCount * 10 - (a.viewCount + a.salesCount * 10)).slice(0, 4),
     [all]
   );
+  const top10 = useMemo(() => [...all].sort((a, b) => b.salesCount - a.salesCount).slice(0, 10), [all]);
   const bestSellers = useMemo(() => [...all].sort((a, b) => b.salesCount - a.salesCount).slice(0, 4), [all]);
   const newest = useMemo(
     () => [...all].sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? "")).slice(0, 4),
@@ -110,8 +102,7 @@ export default function MarketplacePage() {
   );
   const collections = useMemo(() => computeCollections(all), [all]);
   const creators = useMemo(() => {
-    const orders = listOrders();
-    return computeCreators(all, (id) => orders.filter((o) => o.productId === id && o.status === "PAID").length).slice(0, 4);
+    return computeCreators(all, (id) => all.filter((p) => p.id === id).reduce((s, p) => s + p.salesCount, 0)).slice(0, 4);
   }, [all]);
 
   const goExplore = (params: string): void => {
@@ -119,20 +110,22 @@ export default function MarketplacePage() {
   };
 
   return (
-    <main style={{ minHeight: "100vh", background: MK.bg, color: "#fff", fontFamily: FONT }}>
+    <main style={{ minHeight: "100vh", background: MK.bg, color: "#fff", fontFamily: FONT, display: "flex", position: "relative" }}>
       <MarketLights />
-      <MarketplaceHeader
+      <MarketSidebar
         onSearch={(q) => goExplore(`?q=${encodeURIComponent(q)}`)}
+        mobileOpen={mobileOpen}
+        onMenuToggle={() => setMobileOpen((m) => !m)}
       />
-
+      <div className="mk-content" style={{ flex: 1, minWidth: 0, position: "relative", zIndex: 1 }}>
       <MarketplaceHero
         onSearch={(q) => goExplore(`?q=${encodeURIComponent(q)}`)}
         onChip={(format) => goExplore(format ? `?format=${format}` : "")}
       />
 
-      <div style={{ maxWidth: "1250px", margin: "0 auto", padding: "12px 24px 90px" }}>
+      <div style={{ maxWidth: "1250px", margin: "0 auto", padding: "12px 24px 90px" }} className="mk-content-inner">
         {(stats.sales > 0 || stats.buyers > 0) && (
-          <div style={{ display: "flex", gap: "32px", justifyContent: "center", marginBottom: "44px", flexWrap: "wrap" }}>
+          <div className="mk-stats-row" style={{ display: "flex", gap: "32px", justifyContent: "center", marginBottom: "44px", flexWrap: "wrap" }}>
             {stats.sales > 0 && <MarketStat value={formatCompact(stats.sales)} label="Ventas" />}
             {stats.buyers > 0 && <MarketStat value={formatCompact(stats.buyers)} label="Compradores" />}
             {stats.rating > 0 && <MarketStat value={stats.rating.toFixed(2)} label="Rating" />}
@@ -165,9 +158,17 @@ export default function MarketplacePage() {
               ))}
             </ProductGrid>
 
+            <div id="top10" style={{ marginTop: "56px" }}>
+              <SectionHeader
+                title="Top 10 más vendidos"
+                subtitle="Los productos con más ventas reales de la plataforma."
+              />
+              <Top10List products={top10} />
+            </div>
+
             <div id="categorias" style={{ marginTop: "56px" }}>
               <SectionHeader title="¿Qué querés conseguir?" subtitle="Elegí tu objetivo y filtramos por vos." />
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "14px" }}>
+              <div className="mk-objectives-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "14px" }}>
                 {OBJECTIVES.map((o) => (
                   <button
                     key={o.label}
@@ -230,7 +231,7 @@ export default function MarketplacePage() {
             {collections.length > 0 && (
               <div id="colecciones" style={{ marginTop: "56px" }}>
                 <SectionHeader title="Colecciones Crow" subtitle="Selecciones editoriales por tema y stack." />
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
+                <div className="mk-collections-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
                   {collections.map((c) => (
                     <button
                       key={c.id}
@@ -250,7 +251,7 @@ export default function MarketplacePage() {
             {creators.length > 0 && (
               <div id="creadores" style={{ marginTop: "56px" }}>
                 <SectionHeader title="Creadores destacados" subtitle="Quienes publican y venden en Crow." />
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "14px" }}>
+                <div className="mk-creators-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "14px" }}>
                   {creators.map((c) => (
                     <Link
                       key={c.creatorId}
@@ -274,6 +275,7 @@ export default function MarketplacePage() {
             )}
           </div>
         )}
+      </div>
       </div>
       <style>{MARKET_CSS}</style>
     </main>

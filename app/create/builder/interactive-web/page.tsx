@@ -241,7 +241,7 @@ export default function InteractiveWebBuilderPage() {
     }
     setRevalidating(true);
     try {
-      const provider = await AIProviderFactory.create("mock");
+      const provider = await AIProviderFactory.create();
       const result = await provider.validateWebProduct(
         { originalIdea: st.originalIdea, specification: st.specification, blueprint: st.blueprint },
         { blueprint: st.blueprint, sections: product.sections }

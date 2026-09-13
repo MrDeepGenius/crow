@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AUTH_CSS, C, FONT, IconBag, IconGrowth, IconSpark } from "@/app/components/auth-ui";
 import { AccountMenu } from "@/app/components/AccountMenu";
+import { BackButton } from "@/app/components/BackButton";
 import { CreatorPageEditor } from "@/app/components/CreatorPageEditor";
 interface AccountData {
   user: { id: string; email: string; name: string; firstName: string; lastName: string; isAdmin: boolean; createdAt: string };
@@ -89,7 +90,8 @@ export default function AccountPage() {
           <img src="/crowlogo.png" alt="Crow" style={{ width: "32px", height: "32px", objectFit: "contain" }} />
           CROW
         </Link>
-        <div style={{ marginLeft: "auto" }}>
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "12px" }}>
+          <BackButton />
           <AccountMenu />
         </div>
       </header>

@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   description: "Detalle de un producto digital publicado en Crow Market.",
 };
 
-export default function ProductPage({ params }: { params: { slug: string } }) {
-  return <ProductDetailClient key={params.slug} />;
+export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  return <ProductDetailClient key={slug} />;
 }

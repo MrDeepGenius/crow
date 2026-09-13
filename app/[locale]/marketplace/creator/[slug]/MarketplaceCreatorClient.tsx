@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { listOrders as listAllOrders } from "@/app/services/marketplace/marketOrders";
-import { listPublications } from "@/app/services/marketplace/marketStore";
 import type { ProductPublication } from "@/app/services/marketplace/marketTypes";
 import { FONT, MARKET_CSS, MarketLights, MarketplaceHeader, MK, RatingStars } from "../../components/market-ui";
 import { ProductCard } from "../../components/ProductCard";
@@ -21,19 +19,23 @@ export function MarketplaceCreatorClient() {
   const [products, setProducts] = useState<ProductPublication[]>([]);
   const [server, setServer] = useState<ServerPage | null>(null);
   const [ready, setReady] = useState(false);
+
   useEffect(() => {
     const slug = decodeURIComponent(params.slug);
-    setProducts(
-      listPublications().filter(
-        (p) => p.status === "PUBLISHED" && (p.creatorId === slug || p.creatorName.toLowerCase().replace(/[^a-z0-9]+/g, "-") === slug.toLowerCase())
-      )
-    );
-    // Página pública del servidor (foto, nombre, bio). Si no existe u offline,
-    // se muestra con los datos locales del catálogo.
-    void fetch(`/api/creators/${encodeURIComponent(slug.toLowerCase())}`)
+    // Fetch products by creator from API
+    fetch(`/api/products?creatorId=${encodeURIComponent(slug)}&pageSize=48`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.ok && data.items) {
+          setProducts(data.items as ProductPublication[]);
+        }
+      })
+      .catch(() => {});
+    // Fetch creator page
+    fetch(`/api/creators/${encodeURIComponent(slug.toLowerCase())}`)
       .then((r) => {
         if (!r.ok) return null;
-        return r.json() as Promise<{ ok: boolean; page?: ServerPage }>;
+        return r.json();
       })
       .then((data) => {
         if (data?.ok && data.page) setServer(data.page);
@@ -44,10 +46,7 @@ export function MarketplaceCreatorClient() {
 
   const localName = products[0]?.creatorName ?? decodeURIComponent(params.slug);
   const name = server?.displayName ?? localName;
-  const sales = products.reduce(
-    (n, p) => n + listAllOrders().filter((o) => o.productId === p.id && o.status === "PAID").length,
-    0
-  );
+  const sales = products.reduce((n, p) => n + (p.salesCount ?? 0), 0);
   const rated = products.filter((p) => p.ratingCount > 0);
   const avg = rated.length > 0 ? rated.reduce((n, p) => n + p.ratingSum / p.ratingCount, 0) / rated.length : null;
   const totalRatings = rated.reduce((n, p) => n + p.ratingCount, 0);

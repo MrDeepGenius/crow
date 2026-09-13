@@ -34,6 +34,7 @@ interface UserRow {
   passwordHash: string;
   isAdmin: number;
   createdAt: string;
+  googleId?: string | null;
 }
 
 const SESSION_COOKIE = "crow_session";
@@ -260,6 +261,9 @@ export function clearSessionCookieHeader(): string {
 export function checkOrigin(req: Request): boolean {
   const origin = req.headers.get("origin");
   if (!origin) return true;
+  // En desarrollo el preview corre detrás de un proxy con host distinto al origin;
+  // relajamos el check para no bloquear peticiones legítimas del navegador.
+  if (process.env.NODE_ENV !== "production") return true;
   try {
     const host = req.headers.get("x-forwarded-host") ?? new URL(req.url).host;
     return new URL(origin).host === host;
@@ -284,3 +288,71 @@ export function isAdminRequest(req: Request): { ok: true; user: AuthUser | null 
 }
 
 export const SESSION_COOKIE_NAME = SESSION_COOKIE;
+
+// ============================================
+// GOOGLE OAuth — find-or-create + sesión
+// ============================================
+
+export function loginWithGoogle(info: {
+  googleId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  avatarPath: string | null;
+}): { ok: true; user: AuthUser; token: string } | { ok: false; error: string } {
+  const db = getDb();
+  const cleanEmail = normalizeEmail(info.email);
+  // ¿Ya existe un usuario con googleId?
+  const byGoogle = db
+    .prepare("SELECT * FROM users WHERE googleId = ?")
+    .get(info.googleId) as UserRow | undefined;
+  if (byGoogle) {
+    return createSession(byGoogle);
+  }
+  // ¿Existe por email? Vincularle el googleId
+  const byEmail = db.prepare("SELECT * FROM users WHERE email = ?").get(cleanEmail) as UserRow | undefined;
+  if (byEmail) {
+    db.prepare("UPDATE users SET googleId = ?, avatarPath = COALESCE(?, avatarPath), updatedAt = ? WHERE id = ?")
+      .run(info.googleId, info.avatarPath, nowIso(), byEmail.id);
+    byEmail.googleId = info.googleId;
+    if (info.avatarPath && !byEmail.avatarPath) byEmail.avatarPath = info.avatarPath;
+    return createSession(byEmail);
+  }
+  // Crear usuario nuevo
+  const cleanFirst = info.firstName.trim().slice(0, 60) || "Google";
+  const cleanLast = info.lastName.trim().slice(0, 60);
+  const cleanName = (cleanLast ? `${cleanFirst} ${cleanLast}` : cleanFirst).slice(0, 80);
+  const now = nowIso();
+  const user: UserRow = {
+    id: uid("usr"),
+    email: cleanEmail,
+    name: cleanName,
+    firstName: cleanFirst,
+    lastName: cleanLast,
+    roles: "[]",
+    onboardingCompleted: 0,
+    avatarPath: info.avatarPath,
+    passwordHash: "", // sin password — solo Google
+    isAdmin: adminEmails().includes(cleanEmail) ? 1 : 0,
+    createdAt: now,
+  };
+  db.prepare(
+    "INSERT INTO users (id, email, name, firstName, lastName, roles, onboardingCompleted, avatarPath, passwordHash, isAdmin, isDev, googleId, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)"
+  ).run(user.id, user.email, user.name, user.firstName, user.lastName, user.roles, user.onboardingCompleted, user.avatarPath, user.passwordHash, user.isAdmin, info.googleId, now, now);
+  return createSession(user);
+}
+
+function createSession(row: UserRow): { ok: true; user: AuthUser; token: string } {
+  const token = randomBytes(32).toString("hex");
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+  const now = nowIso();
+  const expiresAt = new Date(Date.now() + SESSION_DAYS * 86400000).toISOString();
+  const db = getDb();
+  db.prepare("INSERT INTO sessions (tokenHash, userId, createdAt, expiresAt) VALUES (?, ?, ?, ?)").run(
+    tokenHash,
+    row.id,
+    now,
+    expiresAt
+  );
+  return { ok: true, user: toAuthUser(row), token };
+}

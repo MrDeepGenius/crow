@@ -1,5 +1,5 @@
 // ============================================
-// PRODUCT DETAIL - landing premium por formato
+// PRODUCT DETAIL - landing premium por formato (API backend)
 // ============================================
 
 "use client";
@@ -7,15 +7,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import {
-  getPublicationBySlug,
-  incrementViews,
-  logEvent,
-  recommendFor,
-  savePublication,
-} from "@/app/services/marketplace/marketStore";
-import { addReview, canReview, listReviews } from "@/app/services/marketplace/marketLedger";
-import { listOrders } from "@/app/services/marketplace/marketOrders";
 import type { ProductPublication, Review } from "@/app/services/marketplace/marketTypes";
 import type { GeneratedCourse } from "@/app/services/ai/types";
 import type { InteractiveWebProduct } from "@/app/services/ai/interactiveWebTypes";
@@ -46,86 +37,104 @@ interface DetailData {
   product: ProductPublication | null;
   recommended: ProductPublication[];
   reviews: Review[];
-  eligibleOrderId: string | null;
-}
-
-function loadDetail(slug: string): DetailData {
-  const empty: DetailData = { product: null, recommended: [], reviews: [], eligibleOrderId: null };
-  if (typeof window === "undefined") return empty;
-  const found = getPublicationBySlug(slug);
-  if (!found || found.status !== "PUBLISHED") return empty;
-  let eligibleOrderId: string | null = null;
-  try {
-    const buyer = window.localStorage.getItem("crow_buyer_id");
-    if (buyer) {
-      const paidOrder = listOrders().find(
-        (o) => o.buyerId === buyer && o.productId === found.id && o.status === "PAID"
-      );
-      if (paidOrder && canReview(buyer, found.id, paidOrder.id)) {
-        eligibleOrderId = paidOrder.id;
-      }
-    }
-  } catch {
-    // sin comprador
-  }
-  return {
-    product: found,
-    recommended: recommendFor(found.id, 4),
-    reviews: listReviews(found.id),
-    eligibleOrderId,
-  };
+  canReview: boolean;
+  loading: boolean;
 }
 
 export function ProductDetailClient() {
   const params = useParams<{ slug: string }>();
   const router = useRouter();
-  // Primer render vacío = servidor (evita hydration mismatch con localStorage).
-  const [data, setData] = useState<DetailData>({ product: null, recommended: [], reviews: [], eligibleOrderId: null });
-  useEffect(() => {
-    setData(loadDetail(params.slug));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.slug]);
+  const [data, setData] = useState<DetailData>({ product: null, recommended: [], reviews: [], canReview: false, loading: true });
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [reviewError, setReviewError] = useState<string | null>(null);
-  const { product, recommended, reviews, eligibleOrderId } = data;
-  const missing = product === null;
+  const [reviewSuccess, setReviewSuccess] = useState(false);
 
-  useEffect(() => {
-    if (product) {
-      incrementViews(product.id);
-      logEvent("product_view", product.id, null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const submitReview = (): void => {
-    if (!product || !eligibleOrderId) return;
-    let buyer = "";
+  const loadDetail = async (slug: string): Promise<void> => {
     try {
-      buyer = window.localStorage.getItem("crow_buyer_id") ?? "";
+      const [prodRes, revRes] = await Promise.all([
+        fetch(`/api/products/${encodeURIComponent(slug)}`),
+        fetch(`/api/products/${encodeURIComponent(slug)}/reviews`),
+      ]);
+      const prodData = await prodRes.json();
+      const revData = await revRes.json();
+      if (!prodData.ok) {
+        setData({ product: null, recommended: [], reviews: [], canReview: false, loading: false });
+        return;
+      }
+      const product = prodData.product as ProductPublication;
+      // Fetch recommended from same category
+      let recommended: ProductPublication[] = [];
+      try {
+        const recRes = await fetch(`/api/products?category=${encodeURIComponent(product.category)}&pageSize=5`);
+        const recData = await recRes.json();
+        if (recData.ok) {
+          recommended = (recData.items as ProductPublication[]).filter((p) => p.id !== product.id).slice(0, 4);
+        }
+      } catch { /* ignore */ }
+      const reviews = revData.ok ? (revData.reviews as Review[]) : [];
+      // Check if user can review (has entitlement)
+      let canReview = false;
+      try {
+        const accessRes = await fetch(`/api/access?productId=${encodeURIComponent(product.id)}`);
+        const accessData = await accessRes.json();
+        canReview = accessData.ok && accessData.hasAccess === true;
+      } catch { /* ignore */ }
+      setData({ product, recommended, reviews, canReview, loading: false });
     } catch {
-      buyer = "";
+      setData({ product: null, recommended: [], reviews: [], canReview: false, loading: false });
     }
-    if (!buyer) return;
-    setReviewError(null);
-    const created = addReview({ userId: buyer, productId: product.id, orderId: eligibleOrderId, rating, comment });
-    if (!created) {
-      setReviewError("No se pudo publicar: mínimo 10 caracteres, sin enlaces, una reseña por producto.");
-      return;
-    }
-    const updated: ProductPublication = {
-      ...product,
-      ratingSum: product.ratingSum + created.rating,
-      ratingCount: product.ratingCount + 1,
-      updatedAt: new Date().toISOString(),
-    };
-    savePublication(updated);
-    setData({ ...data, product: updated, reviews: listReviews(product.id), eligibleOrderId: null });
-    setComment("");
   };
 
-  if (missing) {
+  useEffect(() => {
+    loadDetail(params.slug);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.slug]);
+
+  const submitReview = async (): Promise<void> => {
+    if (!data.product) return;
+    setReviewError(null);
+    setReviewSuccess(false);
+    if (comment.trim().length < 10) {
+      setReviewError("Mínimo 10 caracteres.");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/products/${encodeURIComponent(data.product.slug)}/reviews`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rating, comment: comment.trim() }),
+      });
+      const result = await res.json();
+      if (!result.ok) {
+        setReviewError(result.reason === "NO_ENTITLEMENT" ? "Solo compradores verificados pueden reseñar." : result.reason === "COMMENT_TOO_SHORT" ? "Mínimo 10 caracteres." : result.reason === "NO_LINKS" ? "Sin enlaces en la reseña." : "No se pudo publicar.");
+        return;
+      }
+      setReviewSuccess(true);
+      setComment("");
+      // Reload reviews
+      loadDetail(params.slug);
+    } catch {
+      setReviewError("Error de red.");
+    }
+  };
+
+  if (data.loading) {
+    return (
+      <main style={{ minHeight: "100vh", background: MK.bg, color: "#fff", fontFamily: FONT }}>
+        <MarketplaceHeader />
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "40px 24px" }}>
+          <div className="mk-skeleton" style={{ height: "320px", marginBottom: "16px" }} />
+          <div className="mk-skeleton" style={{ height: "20px", width: "50%" }} />
+        </div>
+        <style>{MARKET_CSS}</style>
+      </main>
+    );
+  }
+
+  const { product, recommended, reviews, canReview } = data;
+
+  if (!product) {
     return (
       <main style={{ minHeight: "100vh", background: MK.bg, color: "#fff", fontFamily: FONT }}>
         <MarketplaceHeader />
@@ -135,19 +144,6 @@ export function ProductDetailClient() {
           <button onClick={() => router.push("/marketplace")} className="mk-btn" style={{ marginTop: "16px", padding: "12px 24px", borderRadius: "10px", border: "none", background: MK.violet, color: "#fff", fontWeight: "bold", cursor: "pointer" }}>
             Volver al Marketplace
           </button>
-        </div>
-        <style>{MARKET_CSS}</style>
-      </main>
-    );
-  }
-
-  if (!product) {
-    return (
-      <main style={{ minHeight: "100vh", background: MK.bg, color: "#fff", fontFamily: FONT }}>
-        <MarketplaceHeader />
-        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "40px 24px" }}>
-          <div className="mk-skeleton" style={{ height: "320px", marginBottom: "16px" }} />
-          <div className="mk-skeleton" style={{ height: "20px", width: "50%" }} />
         </div>
         <style>{MARKET_CSS}</style>
       </main>
@@ -229,7 +225,7 @@ export function ProductDetailClient() {
               ))}
             </>
           )}
-          {eligibleOrderId && (
+          {canReview && !reviewSuccess && (
             <div style={{ marginTop: "16px", padding: "16px", border: "1px solid rgba(124,58,237,0.3)", borderRadius: "12px", background: "rgba(124,58,237,0.08)" }}>
               <div style={{ fontWeight: "bold", fontSize: "14px", marginBottom: "10px" }}>Dejá tu reseña (compra verificada)</div>
               <div style={{ display: "flex", gap: "6px", marginBottom: "10px" }} role="radiogroup" aria-label="Rating">
@@ -247,6 +243,7 @@ export function ProductDetailClient() {
               </button>
             </div>
           )}
+          {reviewSuccess && <div style={{ color: MK.green, fontSize: "14px", marginTop: "12px" }}>Reseña publicada. Gracias.</div>}
         </div>
 
         {recommended.length > 0 && (

@@ -107,6 +107,10 @@ function applyMigrations(db: DatabaseSync): void {
   applyV6(db);
   applyV7(db);
   applyV8(db);
+  applyV9(db);
+  applyV10(db);
+  applyV11(db);
+  applyV12(db);
 }
 
 // ---------- Migración v2: cuenta única multi-rol + onboarding ----------
@@ -469,6 +473,204 @@ CREATE INDEX IF NOT EXISTS idx_pool_license ON rewards_pool_ledger(licenseOrderI
 `);
   const now = new Date().toISOString();
   db.prepare("INSERT INTO schema_migrations (version, appliedAt) VALUES (8, ?)").run(now);
+}
+
+function applyV10(db: DatabaseSync): void {
+  const done = db
+    .prepare("SELECT version FROM schema_migrations WHERE version = 10")
+    .get() as { version: number } | undefined;
+  if (done) return;
+  db.exec(`
+CREATE TABLE IF NOT EXISTS withdrawals (
+  id TEXT PRIMARY KEY,
+  userId TEXT NOT NULL REFERENCES users(id),
+  amount REAL NOT NULL,
+  fee REAL NOT NULL,
+  net REAL NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'USDT',
+  walletAddress TEXT NOT NULL,
+  txHash TEXT,
+  status TEXT NOT NULL DEFAULT 'PENDING',
+  idempotencyKey TEXT,
+  periodFirst INTEGER NOT NULL DEFAULT 1,
+  feePercent REAL NOT NULL,
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL,
+  processedAt TEXT,
+  confirmedAt TEXT,
+  rejectedAt TEXT,
+  rejectedReason TEXT,
+  UNIQUE(idempotencyKey)
+);
+CREATE INDEX IF NOT EXISTS idx_withdrawals_user ON withdrawals(userId);
+CREATE INDEX IF NOT EXISTS idx_withdrawals_status ON withdrawals(status);
+CREATE TABLE IF NOT EXISTS withdrawal_audit (
+  id TEXT PRIMARY KEY,
+  withdrawalId TEXT NOT NULL REFERENCES withdrawals(id),
+  event TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  fromStatus TEXT,
+  toStatus TEXT,
+  reason TEXT NOT NULL DEFAULT '',
+  metadata TEXT NOT NULL DEFAULT '{}',
+  createdAt TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_waudit_withdrawal ON withdrawal_audit(withdrawalId);
+`);
+  const now = new Date().toISOString();
+  db.prepare("INSERT INTO schema_migrations (version, appliedAt) VALUES (10, ?)").run(now);
+}
+
+function applyV9(db: DatabaseSync): void {
+  const done = db
+    .prepare("SELECT version FROM schema_migrations WHERE version = 9")
+    .get() as { version: number } | undefined;
+  if (done) return;
+  const cols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+  if (!cols.some((c) => c.name === "googleId")) {
+    db.exec("ALTER TABLE users ADD COLUMN googleId TEXT");
+  }
+  const now = new Date().toISOString();
+  db.prepare("INSERT INTO schema_migrations (version, appliedAt) VALUES (9, ?)").run(now);
+}
+
+// ---------- Migración v11: productos en DB (reemplaza localStorage) ----------
+// products: publicaciones reales del marketplace. creatorId sale de la sesión
+// (inmutable post-creación). content JSON guarda el producto generado completo.
+// product_events: analytics (views, clicks, etc.) reemplazan marketStore events.
+function applyV11(db: DatabaseSync): void {
+  const done = db
+    .prepare("SELECT version FROM schema_migrations WHERE version = 11")
+    .get() as { version: number } | undefined;
+  if (done) return;
+  db.exec(`
+CREATE TABLE IF NOT EXISTS products (
+  id TEXT PRIMARY KEY,
+  slug TEXT NOT NULL UNIQUE,
+  format TEXT NOT NULL,
+  title TEXT NOT NULL,
+  shortDescription TEXT NOT NULL DEFAULT '',
+  description TEXT NOT NULL DEFAULT '',
+  creatorId TEXT NOT NULL REFERENCES users(id),
+  creatorName TEXT NOT NULL DEFAULT '',
+  category TEXT NOT NULL DEFAULT '',
+  subcategory TEXT NOT NULL DEFAULT '',
+  tags TEXT NOT NULL DEFAULT '[]',
+  language TEXT NOT NULL DEFAULT 'es',
+  level TEXT NOT NULL DEFAULT 'todos',
+  price REAL NOT NULL DEFAULT 0,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  previousPrice REAL,
+  coverSvg TEXT,
+  previewKind TEXT NOT NULL DEFAULT 'pdf',
+  previewRef TEXT NOT NULL DEFAULT '',
+  freePreviewChapters INTEGER NOT NULL DEFAULT 1,
+  stats TEXT NOT NULL DEFAULT '{}',
+  includes TEXT NOT NULL DEFAULT '[]',
+  bonuses TEXT NOT NULL DEFAULT '[]',
+  ratingSum REAL NOT NULL DEFAULT 0,
+  ratingCount INTEGER NOT NULL DEFAULT 0,
+  salesCount INTEGER NOT NULL DEFAULT 0,
+  viewCount INTEGER NOT NULL DEFAULT 0,
+  featured INTEGER NOT NULL DEFAULT 0,
+  affiliateEnabled INTEGER NOT NULL DEFAULT 0,
+  affiliatePercent REAL NOT NULL DEFAULT 40,
+  status TEXT NOT NULL DEFAULT 'DRAFT',
+  crowQuality TEXT NOT NULL DEFAULT '{"score":0,"checks":[]}',
+  content TEXT,
+  createdAt TEXT NOT NULL,
+  publishedAt TEXT,
+  updatedAt TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_products_creator ON products(creatorId);
+CREATE INDEX IF NOT EXISTS idx_products_status ON products(status);
+CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
+CREATE INDEX IF NOT EXISTS idx_products_slug ON products(slug);
+CREATE TABLE IF NOT EXISTS product_events (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL,
+  productId TEXT,
+  userId TEXT,
+  timestamp TEXT NOT NULL,
+  meta TEXT NOT NULL DEFAULT '{}'
+);
+CREATE INDEX IF NOT EXISTS idx_product_events_product ON product_events(productId);
+CREATE INDEX IF NOT EXISTS idx_product_events_type ON product_events(type);
+CREATE TABLE IF NOT EXISTS product_reviews (
+  id TEXT PRIMARY KEY,
+  userId TEXT NOT NULL REFERENCES users(id),
+  productId TEXT NOT NULL,
+  orderId TEXT NOT NULL,
+  rating INTEGER NOT NULL,
+  comment TEXT NOT NULL DEFAULT '',
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL,
+  UNIQUE(userId, productId)
+);
+CREATE INDEX IF NOT EXISTS idx_product_reviews_product ON product_reviews(productId);
+CREATE TABLE IF NOT EXISTS affiliate_clicks (
+  id TEXT PRIMARY KEY,
+  affiliateUserId TEXT NOT NULL REFERENCES users(id),
+  productId TEXT,
+  createdAt TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_affiliate_clicks_affiliate ON affiliate_clicks(affiliateUserId);
+CREATE TABLE IF NOT EXISTS affiliate_links (
+  id TEXT PRIMARY KEY,
+  affiliateUserId TEXT NOT NULL REFERENCES users(id),
+  productId TEXT NOT NULL,
+  code TEXT NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1,
+  createdAt TEXT NOT NULL,
+  UNIQUE(affiliateUserId, productId)
+);
+CREATE INDEX IF NOT EXISTS idx_affiliate_links_affiliate ON affiliate_links(affiliateUserId);
+CREATE TABLE IF NOT EXISTS emergency_reserve_ledger (
+  id TEXT PRIMARY KEY,
+  orderId TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  amount REAL NOT NULL,
+  createdAt TEXT NOT NULL,
+  UNIQUE(orderId, kind)
+);
+CREATE INDEX IF NOT EXISTS idx_reserve_order ON emergency_reserve_ledger(orderId);
+`);
+  const now = new Date().toISOString();
+  db.prepare("INSERT INTO schema_migrations (version, appliedAt) VALUES (11, ?)").run(now);
+}
+
+// ---------- Migración v12: licencias Creator server-side ----------
+// creator_licenses: 1 fila por (userId, orderId) — la licencia se activa
+// SOLO tras pago confirmado (order PAID + orderType='license'). El plan y
+// los límites (maxProducts, maxPublished, durationDays) se fijan desde el
+// catálogo del servidor, nunca del cliente. status: ACTIVE | EXPIRED |
+// CANCELLED | PENDING | REVOKED. expiresAt se calcula con durationDays.
+function applyV12(db: DatabaseSync): void {
+  const done = db
+    .prepare("SELECT version FROM schema_migrations WHERE version = 12")
+    .get() as { version: number } | undefined;
+  if (done) return;
+  db.exec(`
+CREATE TABLE IF NOT EXISTS creator_licenses (
+  id TEXT PRIMARY KEY,
+  userId TEXT NOT NULL REFERENCES users(id),
+  plan TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'PENDING',
+  orderId TEXT NOT NULL UNIQUE REFERENCES orders(id),
+  maxProducts INTEGER NOT NULL,
+  maxPublished INTEGER NOT NULL,
+  durationDays INTEGER NOT NULL,
+  purchasedAt TEXT NOT NULL,
+  expiresAt TEXT NOT NULL,
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_licenses_user ON creator_licenses(userId);
+CREATE INDEX IF NOT EXISTS idx_licenses_status ON creator_licenses(status);
+CREATE INDEX IF NOT EXISTS idx_licenses_user_status ON creator_licenses(userId, status);
+`);
+  const now = new Date().toISOString();
+  db.prepare("INSERT INTO schema_migrations (version, appliedAt) VALUES (12, ?)").run(now);
 }
 
 /** Singleton por ruta. En tests usar DATABASE_PATH temporal + closeDb(). */

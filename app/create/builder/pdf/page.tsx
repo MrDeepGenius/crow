@@ -267,7 +267,7 @@ export default function PdfBuilderPage() {
         byteSize: result.byteSize,
         fileName: current.exportInfo?.fileName ?? "ebook.pdf",
       };
-      const provider = await AIProviderFactory.create("mock");
+      const provider = await AIProviderFactory.create();
       const validation = await provider.validatePdfProduct(
         { originalIdea: st.originalIdea, specification: st.specification, blueprint: st.blueprint },
         { blueprint: st.blueprint, chapters: current.chapters, exportInfo }
@@ -300,7 +300,7 @@ export default function PdfBuilderPage() {
     if (!product) return;
     setWorking(true);
     try {
-      const provider = await AIProviderFactory.create("mock");
+      const provider = await AIProviderFactory.create();
       const ctx = providerContext();
       const next: PdfProduct = {
         ...product,
@@ -331,7 +331,7 @@ export default function PdfBuilderPage() {
     if (!product) return;
     setWorking(true);
     try {
-      const provider = await AIProviderFactory.create("mock");
+      const provider = await AIProviderFactory.create();
       const ctx = providerContext();
       const ci = product.chapters.findIndex((c) => c.id === chapterId);
       const si = product.chapters[ci]?.sections.findIndex((s) => s.id === sectionId) ?? -1;

@@ -2,6 +2,8 @@
 // Producción: cron externo cada ~15s contra este endpoint (server-side,
 // no depende del navegador). Throttle interno: max 1 scan cada 10s.
 // En dev/instancia única además corre ensureMonitorScheduler() en proceso.
+// Si CROW_ADMIN_KEY está seteada, el endpoint exige header x-admin-key
+// (igual que los endpoints de admin). Sin la key (dev) queda abierto.
 import { NextResponse } from "next/server";
 import { getPaymentsConfig } from "@/app/services/payments/config";
 import { createRpcFetch } from "@/app/services/payments/chain";
@@ -14,7 +16,12 @@ import {
 let lastRunAt = 0;
 const THROTTLE_MS = 10000;
 
-export async function GET(): Promise<NextResponse> {
+export async function GET(req: Request): Promise<NextResponse> {
+  // Protección con CROW_ADMIN_KEY cuando está configurada
+  const adminKey = process.env.CROW_ADMIN_KEY?.trim() || "";
+  if (adminKey && req.headers.get("x-admin-key") !== adminKey) {
+    return NextResponse.json({ ok: false, reason: "UNAUTHORIZED" }, { status: 401 });
+  }
   try {
     const config = getPaymentsConfig();
     ensureMonitorScheduler();

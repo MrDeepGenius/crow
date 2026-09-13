@@ -199,7 +199,12 @@ export abstract class AIProvider {
 export type AIProviderType = "mock" | "openai" | "anthropic";
 
 export class AIProviderFactory {
-  static async create(type: AIProviderType): Promise<AIProvider> {
+  static async create(type?: AIProviderType): Promise<AIProvider> {
+    // Si no se especifica tipo, usar el modo configurado
+    if (!type) {
+      const { AI_CONFIG } = await import("@/app/config/ai");
+      type = AI_CONFIG.mode;
+    }
     switch (type) {
       case "mock":
         const { MockAIProvider } = await import("./MockAIProvider");

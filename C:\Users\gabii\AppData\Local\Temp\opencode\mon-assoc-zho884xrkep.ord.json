@@ -1,0 +1,46 @@
+{
+  "orders": {
+    "ord-a": {
+      "orderId": "ord-a",
+      "buyerId": "ana",
+      "productId": "prod-1",
+      "amount": 10,
+      "currency": "USDT",
+      "createdAt": "2026-09-12T17:18:42.944Z",
+      "expiresAt": "2026-09-12T17:58:42.944Z",
+      "fromBlock": 90,
+      "status": "REVIEW_REQUIRED",
+      "txHash": null,
+      "blockNumber": null,
+      "updatedAt": "2026-09-12T17:28:42.966Z"
+    },
+    "ord-b": {
+      "orderId": "ord-b",
+      "buyerId": "beto",
+      "productId": "prod-1",
+      "amount": 25,
+      "currency": "USDT",
+      "createdAt": "2026-09-12T17:18:42.944Z",
+      "expiresAt": "2026-09-12T17:58:42.944Z",
+      "fromBlock": 90,
+      "status": "PAID",
+      "txHash": "0x1111111111111111111111111111111111111111111111111111111111111111",
+      "blockNumber": 100,
+      "updatedAt": "2026-09-12T17:28:42.967Z"
+    },
+    "ord-c": {
+      "orderId": "ord-c",
+      "buyerId": "carla",
+      "productId": "prod-1",
+      "amount": 10,
+      "currency": "USDT",
+      "createdAt": "2026-09-12T17:18:42.944Z",
+      "expiresAt": "2026-09-12T17:58:42.944Z",
+      "fromBlock": 90,
+      "status": "REVIEW_REQUIRED",
+      "txHash": null,
+      "blockNumber": null,
+      "updatedAt": "2026-09-12T17:28:42.966Z"
+    }
+  }
+}

@@ -10,15 +10,18 @@ export interface LicenseTier {
   name: string;
   price: number;
   currency: "USDT";
+  maxProducts: number;
+  maxPublished: number;
+  durationDays: number;
   perks: string[];
 }
 
 export const LICENSE_TIERS: LicenseTier[] = [
-  { id: "START", name: "Start", price: 20, currency: "USDT", perks: ["Acceso comprador", "1 CP por USDT válido"] },
-  { id: "BASIC", name: "Basic", price: 50, currency: "USDT", perks: ["Todo Start", "Soporte prioritario"] },
-  { id: "PRO", name: "Pro", price: 100, currency: "USDT", perks: ["Todo Basic", "Herramientas pro"] },
-  { id: "BUSINESS", name: "Business", price: 300, currency: "USDT", perks: ["Todo Pro", "Uso en equipo"] },
-  { id: "ELITE", name: "Elite", price: 500, currency: "USDT", perks: ["Todo Business", "Acceso anticipado"] },
+  { id: "START", name: "Start", price: 20, currency: "USDT", maxProducts: 2, maxPublished: 1, durationDays: 30, perks: ["Acceso comprador", "1 CP por USDT válido"] },
+  { id: "BASIC", name: "Basic", price: 50, currency: "USDT", maxProducts: 4, maxPublished: 3, durationDays: 60, perks: ["Todo Start", "Soporte prioritario"] },
+  { id: "PRO", name: "Pro", price: 100, currency: "USDT", maxProducts: 10, maxPublished: 5, durationDays: 90, perks: ["Todo Basic", "Herramientas pro"] },
+  { id: "BUSINESS", name: "Business", price: 300, currency: "USDT", maxProducts: 20, maxPublished: 10, durationDays: 150, perks: ["Todo Pro", "Uso en equipo"] },
+  { id: "ELITE", name: "Elite", price: 500, currency: "USDT", maxProducts: 50, maxPublished: 30, durationDays: 365, perks: ["Todo Business", "Acceso anticipado"] },
 ];
 
 export function getLicenseTier(id: string): LicenseTier | null {

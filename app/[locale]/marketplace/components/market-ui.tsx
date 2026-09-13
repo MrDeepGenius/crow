@@ -52,16 +52,16 @@ export function MarketLights() {
 }
 
 export const MARKET_CSS = `
-.mk-card { transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease; }
-.mk-card:hover { transform: translateY(-4px); border-color: rgba(124,58,237,0.4); box-shadow: 0 16px 44px rgba(124,58,237,0.14); }
-.mk-card:hover .mk-zoom { transform: scale(1.05); }
-.mk-zoom { transition: transform 0.35s ease; }
-.mk-btn { transition: filter 0.15s ease, transform 0.15s ease; }
+.mk-card { transition: transform 0.22s cubic-bezier(0.4,0,0.2,1), border-color 0.22s ease, box-shadow 0.22s ease; }
+.mk-card:hover { transform: translateY(-4px); border-color: rgba(124,58,237,0.4); box-shadow: 0 16px 44px rgba(124,58,237,0.14), 0 0 0 1px rgba(124,58,237,0.06); }
+.mk-card:hover .mk-zoom { transform: scale(1.06); }
+.mk-zoom { transition: transform 0.35s cubic-bezier(0.4,0,0.2,1); }
+.mk-btn { transition: filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease; }
 .mk-btn:hover { filter: brightness(1.12); }
 .mk-btn:active { transform: scale(0.98); }
 .mk-btn:focus-visible, a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #a855f7; outline-offset: 2px; }
-.mk-fadein { animation: mkFade 0.4s ease both; }
-@keyframes mkFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.mk-fadein { animation: mkFade 0.45s cubic-bezier(0.4,0,0.2,1) both; }
+@keyframes mkFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .mk-skeleton { position: relative; overflow: hidden; background: rgba(255,255,255,0.05); border-radius: 12px; }
 .mk-skeleton::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(168,85,247,0.1), transparent); animation: mkShimmer 1.5s infinite; }
 @keyframes mkShimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
@@ -72,6 +72,27 @@ export const MARKET_CSS = `
 }
 @media (max-width: 760px) {
   .mk-hide-mobile { display: none !important; }
+}
+@media (max-width: 900px) {
+  .mk-content { width: 100% !important; }
+  .mk-hero-search { flex-direction: column !important; gap: 8px !important; }
+  .mk-hero-search input { width: 100% !important; }
+  .mk-hero-search button { width: 100% !important; }
+  .mk-header { padding: 0 16px !important; gap: 12px !important; }
+  .mk-create-btn { padding: 8px 14px !important; font-size: 12px !important; }
+}
+@media (max-width: 600px) {
+  .mk-content > div { padding: 12px 16px 60px !important; }
+  .mk-product-grid { grid-template-columns: 1fr 1fr !important; gap: 12px !important; }
+  .mk-objectives-grid { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+  .mk-collections-grid { grid-template-columns: 1fr !important; }
+  .mk-creators-grid { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+  .mk-stats-row { gap: 16px !important; }
+}
+@media (max-width: 400px) {
+  .mk-product-grid { grid-template-columns: 1fr !important; }
+  .mk-objectives-grid { grid-template-columns: 1fr !important; }
+  .mk-creators-grid { grid-template-columns: 1fr !important; }
 }
 `;
 
@@ -88,6 +109,7 @@ export function MarketplaceHeader({ onSearch }: { onSearch?: (q: string) => void
   }, []);
   return (
     <header
+      className="mk-header"
       style={{
         position: "sticky",
         top: 0,
@@ -138,7 +160,7 @@ export function MarketplaceHeader({ onSearch }: { onSearch?: (q: string) => void
         <Link href="/my-products" className="mk-btn mk-hide-mobile" style={{ color: MK.muted, textDecoration: "none", fontSize: "14px" }}>
           Mis productos
         </Link>
-        <Link href="/create" className="mk-btn" style={{ padding: "10px 18px", borderRadius: "10px", background: MK.violet, color: "#fff", fontWeight: "bold", textDecoration: "none", fontSize: "13px", whiteSpace: "nowrap" }}>
+        <Link href="/create" className="mk-btn mk-create-btn" style={{ padding: "10px 18px", borderRadius: "10px", background: MK.violet, color: "#fff", fontWeight: "bold", textDecoration: "none", fontSize: "13px", whiteSpace: "nowrap" }}>
           Crear
         </Link>
         <AccountMenu />
@@ -183,6 +205,7 @@ export function MarketplaceHero({
             e.preventDefault();
             onSearch(q);
           }}
+          className="mk-hero-search"
           style={{ display: "flex", gap: "10px", maxWidth: "560px", margin: "0 auto 20px", padding: "8px", borderRadius: "16px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
         >
           <label htmlFor="mk-hero-search" style={{ position: "absolute", left: "-9999px" }}>¿Qué estás buscando?</label>
@@ -249,7 +272,10 @@ export function RatingStars({ sum, count, minReviews }: { sum: number; count: nu
 export function FavoriteButton({ productId, size }: { productId: string; size?: number }) {
   const [fav, setFav] = useState(false);
   useEffect(() => {
-    import("@/app/services/marketplace/marketStore").then((m) => setFav(m.isFavorite(productId)));
+    try {
+      const favs = JSON.parse(window.localStorage.getItem("crow_favorites") ?? "[]") as string[];
+      setFav(favs.includes(productId));
+    } catch { /* ignore */ }
   }, [productId]);
   return (
     <button
@@ -258,7 +284,17 @@ export function FavoriteButton({ productId, size }: { productId: string; size?: 
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        import("@/app/services/marketplace/marketStore").then((m) => setFav(m.toggleFavorite(productId)));
+        try {
+          let favs = JSON.parse(window.localStorage.getItem("crow_favorites") ?? "[]") as string[];
+          if (favs.includes(productId)) {
+            favs = favs.filter((f) => f !== productId);
+            setFav(false);
+          } else {
+            favs.push(productId);
+            setFav(true);
+          }
+          window.localStorage.setItem("crow_favorites", JSON.stringify(favs));
+        } catch { /* ignore */ }
       }}
       className="mk-btn"
       style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "50%", width: size ?? 36, height: size ?? 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: fav ? "#f59e0b" : "#fff", fontSize: "16px" }}
@@ -270,7 +306,7 @@ export function FavoriteButton({ productId, size }: { productId: string; size?: 
 
 export function ProductGrid({ children }: { children: ReactNode }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "18px" }}>
+    <div className="mk-product-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "18px" }}>
       {children}
     </div>
   );
@@ -278,7 +314,7 @@ export function ProductGrid({ children }: { children: ReactNode }) {
 
 export function SkeletonCards({ count }: { count?: number }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "18px" }}>
+    <div className="mk-product-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "18px" }}>
       {Array.from({ length: count ?? 8 }, (_, i) => (
         <div key={i}>
           <div className="mk-skeleton" style={{ height: "170px", marginBottom: "12px" }} />
